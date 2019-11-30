@@ -24,7 +24,7 @@ def compute_gcd(a, b, debug=False):
     if debug:
         print('gcd({}, {}) = '.format(high, low), end='')
 
-    while(low):
+    while low:
         high, low = low, high % low
 
         if debug:
@@ -117,7 +117,7 @@ def get_inverse(a, n, debug=False):
     return result
 
 
-def get_get_coprime_in_range(n):
+def get_coprime_in_range(n):
     """
     Returns a number in the range [2-n) which is coprime with n
     """
@@ -139,7 +139,7 @@ def get_get_coprime_in_range(n):
 
     while compute_gcd(n, candidate, debug=False) != 1:
         # Use steps of 2 to avoid even numbers
-        candidate = (candidate + 2) % candidate
+        candidate = (candidate + 2) % n
 
         if candidate <= 2:
             candidate = 3

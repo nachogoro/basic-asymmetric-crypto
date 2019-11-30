@@ -167,7 +167,7 @@ class ElGamal:
                   'padding each one with A (0) up to %d characters\n'
                   % (len(chunks[0]) + 1))
 
-        result = Encrypted_Pair(gv='', m_g_v_b='')
+        result = Encrypted_Pair(g_v='', m_g_v_b='')
 
         for pair in encrypted_pairs:
             pair_as_string = Encrypted_Pair(
@@ -187,16 +187,16 @@ class ElGamal:
 
             if debug:
                 print('\n(%s, %s) is (%s, %s) after padding\n'
-                      % (pair_as_string.gv, pair_as_string.m_g_v_b,
-                         padded.gv, padded.m_g_v_b))
+                      % (pair_as_string.g_v, pair_as_string.m_g_v_b,
+                         padded.g_v, padded.m_g_v_b))
 
                 result = Encrypted_Pair(
-                    gv=result.gv + padded.gv,
+                    g_v=result.g_v + padded.g_v,
                     m_g_v_b=result.m_g_v_b + padded.m_g_v_b)
 
         if debug:
             print('\nThe final result after assembling all blocks is: (%s, %s)'
-                  %(result.gv, result.m_g_v_b))
+                  %(result.g_v, result.m_g_v_b))
 
         return result
 
@@ -330,23 +330,26 @@ class ElGamal:
 
     @staticmethod
     def sign(msg, sender, receiver, p, generator,
-             h=None, base=27, hash_fn=None, debug=False):
+             h=None, v=None, base=27, hash_fn=None, debug=False):
         """
         Signs a message using ElGamal.
 
-        The message will only be signed by the sender, without being encrypted
-        for the receiver.
+        The message will be signed by the sender and encrypted for the
+        receiver, generating a two tuples of two elements (signing a message
+        results in a tuple (r, s), encrypting each one of those elements
+        generates a new tuple).
 
         msg: message to be signed.
         sender: ElGamal_Agent which will send the message.
         receiver: ElGamal_Agent which will receive the message being encrypted.
-                  Unused in the current implementation.
         p: prime number to use for this encryption (known by sender and
            receiver).
         generator: generator to use for this signing (known by sender and
                    receiver).
         h: arbitrary co-prime number with (p-1) to be used for signing. If not
            specified, a random number will be selected.
+        v: arbitrary number to use for the encryption. If not specified, a
+           random number will be selected.
         base: number of symbols to be used in the alphabet. Currently supported
               26 (English) and 27 (Spanish)
         debug: if set to True, the method will log all the steps used to reach
@@ -451,7 +454,8 @@ class ElGamal:
         if len(signed_chunks) == 1:
             if debug:
                 print('\nSince we didn\'t have to split the message, '
-                    'the result is simply (r, s) = (%d, %d) as strings in base %d'
+                      'the signed message is simply (r, s) = (%d, %d) as '
+                      'strings in base %d'
                     % (r,
                        signed_chunks[0],
                        base))
@@ -467,35 +471,72 @@ class ElGamal:
                 print('\nThe signed message is: (%s, %s)'
                       % (result.r, result.s))
 
-            return result
+        else:
+            # More than one chunk, they need to be padded if we are signing
+            if debug:
+                print('\nFinally, we assemble all the signed chunks, '
+                    'padding each one with A (0) up to %d characters\n'
+                    % (len(chunks[0]) + 1))
 
-        # More than one chunk, they need to be padded if we are signing
-        if debug:
-            print('\nFinally, we assemble all the signed chunks, '
-                  'padding each one with A (0) up to %d characters\n'
-                  % (len(chunks[0]) + 1))
+            assembled_signature = ''
 
-        result = ''
+            for signed_chunk in signed_chunks:
+                chunk_as_string = encodingtools.get_as_string(
+                    signed_chunk,
+                    base,
+                    debug=debug)
 
-        for signed_chunk in signed_chunks:
-            chunk_as_string = encodingtools.get_as_string(
-                signed_chunk,
-                base,
-                debug=debug)
+                # Pad with 'A' until one character more than the plan text chunk
+                padded = chunk_as_string.rjust(len(chunks[0]) + 1, 'A')
 
-            # Pad with 'A' until one character more than the plan text chunk
-            padded = chunk_as_string.rjust(len(chunks[0]) + 1, 'A')
+                if debug:
+                    print('\n%s is %s after padding\n'
+                        % (chunk_as_string, padded))
+
+                    assembled_signature += padded
+
+            result = Signed_Pair(
+                r=r_as_string,
+                s=assembled_signature)
 
             if debug:
-                print('\n%s is %s after padding\n'
-                      % (chunk_as_string, padded))
+                print('\nThe result after assembling all blocks is: (r, s) = (%s, %s)'
+                      %(result.r, result.s))
 
-                result += padded
 
         if debug:
-            print('\nThe final result after assembling all blocks is: (r, s) = (%s, %s)'
-                  %(r_as_string, result))
+            print('\n\nThe last step is to encrypt (r, s) individually with the '
+                  'public key of the receiver)')
 
-        return Signed_Pai(r=r_as_string, s=result)
+        encrypted_signed_pair = Signed_Pair(
+            r=ElGamal.encrypt(
+                msg=result.r,
+                sender=sender,
+                receiver=receiver,
+                p=p,
+                generator=generator,
+                v=v,
+                base=base,
+                debug=debug),
+            s=ElGamal.encrypt(
+                msg=result.s,
+                sender=sender,
+                receiver=receiver,
+                p=p,
+                generator=generator,
+                v=v,
+                base=base,
+                debug=debug))
+
+        if debug:
+            print('\n(r, s) (%s, %s) gets finally encrypted to ((%s, %s), (%s, %s))'
+                  % (result.r,
+                     result.s,
+                     encrypted_signed_pair.r.g_v,
+                     encrypted_signed_pair.r.m_g_v_b,
+                     encrypted_signed_pair.s.g_v,
+                     encrypted_signed_pair.s.m_g_v_b))
+
+        return encrypted_signed_pair
 
 

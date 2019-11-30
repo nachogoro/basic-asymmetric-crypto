@@ -83,18 +83,18 @@ rsa_suite.RSA.sign(msg='UNED', sender=alberto, receiver=barbara, base=27,
 
 ```python
 # Example code to encrypt with ElGamal
-import elgamal
+import elgamal_suite
 import encodingtools
 
-alberto = elgamal.ElGamal_Agent(
+alberto = elgamal_suite.ElGamal_Agent(
     name='Alberto',
     private_key=28236)
 
-bono = elgamal.ElGamal_Agent(
+bono = elgamal_suite.ElGamal_Agent(
     name='Bono',
     private_key=21702)
 
-msg_pair = elgamal.ElGamal.encrypt(
+msg_pair = elgamal_suite.ElGamal.encrypt(
     'HIJO', sender=alberto, receiver=bono, p=15485863, generator=7,
     v=480, base=26, debug=True)
 ```
