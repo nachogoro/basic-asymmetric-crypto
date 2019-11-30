@@ -1,15 +1,22 @@
 # Author: NachoGoro
 
 from collections import namedtuple
+import random
 
-Extended_Euclided_Entry = namedtuple(
-    'Extended_Euclided_Entry',
+"""
+An entry in the table used by the extended Euclides algorithm
+"""
+Extended_Euclides_Entry = namedtuple(
+    'Extended_Euclides_Entry',
     ['y', 'g', 'u', 'v'])
 
 
 def compute_gcd(a, b, debug=False):
     """
     Returns the result of: gcd(a, b)
+
+    If debug is set to True, it will print all the steps used to reach the
+    solution.
     """
     high = max(a, b)
     low = min(a, b)
@@ -32,6 +39,9 @@ def compute_gcd(a, b, debug=False):
 def quick_exp(a, b, p, debug=False):
     """
     Returns the result of: a**b  mod p
+
+    If debug is set to True, it will print all the steps used to reach the
+    solution.
     """
     z = b
     x = a
@@ -59,6 +69,9 @@ def get_inverse(a, n, debug=False):
     Returns the value x which fulfills: x*a = 1 mod n
 
     If such a value does not exist, it returns None
+
+    If debug is set to True, it will print all the steps used to reach the
+    solution.
     """
     if compute_gcd(a, n, debug) != 1:
         if debug:
@@ -66,23 +79,26 @@ def get_inverse(a, n, debug=False):
         return None
 
     table = list()
-    first_entry = Extended_Euclided_Entry(y=None, g=n, u=1, v=0)
+    first_entry = Extended_Euclides_Entry(y=None, g=n, u=1, v=0)
     table.append(first_entry)
 
-    second_entry = Extended_Euclided_Entry(y=None, g=a, u=0, v=1)
+    second_entry = Extended_Euclides_Entry(y=None, g=a, u=0, v=1)
     table.append(second_entry)
 
     i = 2
     while table[i-1].g != 0:
         y = table[i-2].g // table[i-1].g
 
-        table.append(Extended_Euclided_Entry(
+        table.append(Extended_Euclides_Entry(
             y=y,
             g=table[i-2].g - y*table[i-1].g,
             u=table[i-2].u - y*table[i-1].u,
             v=table[i-2].v - y*table[i-1].v))
 
         i += 1
+
+    potentially_negative_result = table[i-2].v
+    result = potentially_negative_result % n
 
     if debug:
         # Print the whole development
@@ -94,4 +110,38 @@ def get_inverse(a, n, debug=False):
                 i, entry.y if entry.y else '--', entry.g, entry.u, entry.v))
             print('{0: ^10}|{0: ^10}|{0: ^10}|{0: ^10}|{0: ^10}'.format('-'*10))
 
-    return(table[i-2].v % n)
+    if debug:
+        print('The inverse of %d in %d is then %d mod %d = %d'
+              % (a, n, potentially_negative_result, n, result))
+
+    return result
+
+
+def get_get_coprime_in_range(n):
+    """
+    Returns a number in the range [2-n) which is coprime with n
+    """
+    if (n % 2) != 0:
+        # The number is even, which means that it will be coprime with any
+        # power of two
+        max_exp = int(math.log(n, 2))
+        random_exp = random.randrange(max_exp)
+        return 2**random_exp
+
+    candidate = random.randrange(n)
+
+    if (candidate % 2) == 0:
+        # The number is even, so no point in trying even candidates
+        candidate = (candidate + 1) % n
+
+    if candidate <= 2:
+        candidate = 3
+
+    while compute_gcd(n, candidate, debug=False) != 1:
+        # Use steps of 2 to avoid even numbers
+        candidate = (candidate + 2) % candidate
+
+        if candidate <= 2:
+            candidate = 3
+
+    return candidate
