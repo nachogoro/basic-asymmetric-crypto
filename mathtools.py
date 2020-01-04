@@ -22,7 +22,7 @@ def compute_gcd(a, b, debug=False):
     low = min(a, b)
 
     if debug:
-        print('gcd({}, {}) = '.format(high, low), end='')
+        print('\ngcd({}, {}) = '.format(high, low), end='')
 
     while low:
         high, low = low, high % low
@@ -43,6 +43,9 @@ def quick_exp(a, b, p, debug=False):
     If debug is set to True, it will print all the steps used to reach the
     solution.
     """
+    if debug:
+        print('\nComputing %d ^ %d (mod %d)' % (a, b, p))
+
     z = b
     x = a
     r = 1
@@ -73,10 +76,15 @@ def get_inverse(a, n, debug=False):
     If debug is set to True, it will print all the steps used to reach the
     solution.
     """
+    if debug:
+        print('\nComputing the multiplicative inverse of %d in %d' % (a, n))
+
     if compute_gcd(a, n, debug) != 1:
         if debug:
             print('No inverse: {} and {} are not co-primes'.format(a, n))
         return None
+    elif debug:
+        print('%d and %d are coprimes, so the inverse exists\n' % (a, n))
 
     table = list()
     first_entry = Extended_Euclides_Entry(y=None, g=n, u=1, v=0)

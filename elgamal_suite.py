@@ -125,10 +125,13 @@ class ElGamal:
 
             encrypted_pairs.append(
                 Encrypted_Pair(
-                    g_v=mathtools.quick_exp(generator, v, p),
+                    g_v=mathtools.quick_exp(generator, v, p, debug=debug),
                     m_g_v_b=(
                         chunk_number*mathtools.quick_exp(
-                            receiver.get_public_key(generator, p), v, p) % p)))
+                            receiver.get_public_key(generator, p),
+                            v,
+                            p,
+                            debug=debug) % p)))
 
             if debug:
                 print('\n%s gets encrypted to (%d, %d)'
@@ -417,7 +420,7 @@ class ElGamal:
         if debug:
             if len(chunks) == 1:
                 print('\nNo need to split the message for signing')
-                print('\nNow resolve: m = a*r + h*s (mod p)')
+                print('\nNow resolve: m = a*r + h*s (mod p-1)')
             else:
                 print('\nThe message will be split in chunks of %d characters'
                       % len(chunks[0]))
@@ -438,7 +441,7 @@ class ElGamal:
                          r,
                          h,
                          p-1))
-                print('\nFor this we need the inverse of h (%d) in p (%d)'
+                print('\nFor this we need the inverse of h (%d) in (p-1) (%d)'
                       % (h, p-1))
 
             chunk_signature = (
