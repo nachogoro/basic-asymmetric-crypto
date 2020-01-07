@@ -151,7 +151,8 @@ class RSA:
 
 
     @staticmethod
-    def sign(msg, sender, receiver, base=27, hash_fn=None, debug=False):
+    def sign(msg, sender, receiver, base=27, hash_fn=None,
+             encrypt_for_receiver=True, debug=False):
         """
         Signs a message to be sent to an agent using RSA.
 
@@ -167,6 +168,9 @@ class RSA:
                  before signing it. It must take three parameters (message to
                  hash as a string, base to use and the debug flag) and return
                  the hashed message as a string.
+        encrypt_for_receiver: Whether the signature should be encrypted with
+                              the receiver's public key (True by default, as it
+                              is normally asked for in exercises).
         debug: if set to True, the method will log all the steps used to reach
                the solution.
         """
@@ -208,6 +212,9 @@ class RSA:
 
         rubric = RSA._encrypt(msg=msg_to_sign, key=sender.get_private_key(),
                               n=sender.get_n(), base=base, debug=debug)
+
+        if not encrypt_for_receiver:
+            return rubric
 
         if debug:
             print('\nFinally, we need to encrypt the rubric '

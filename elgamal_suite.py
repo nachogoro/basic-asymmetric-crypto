@@ -24,12 +24,32 @@ class ElGamal_Agent:
         return self.private_key
 
 
-    def get_public_key(self, generator, p):
+    def get_public_key(self, generator, p, debug=False):
         if not self.private_key:
             # Public key cannot be computed without a private key
+            if debug:
+                print(
+                    'Cannot compute public key for %s without its private key'
+                    % self.name)
             return None
 
-        return mathtools.quick_exp(generator, self.private_key, p)
+        if debug:
+            print(
+                'Public key for %s is computed from its private key as: %d ^ %d (mod %d)'
+                % (self.name, generator, self.private_key, p))
+
+        public_key = mathtools.quick_exp(
+            generator,
+            self.private_key,
+            p,
+            debug=debug)
+
+        if debug:
+            print(
+                'Public key for %s with generator=%d and p=%d is %d'
+                %(self.name, generator, p, public_key))
+
+        return public_key
 
 
 """
@@ -78,7 +98,7 @@ class ElGamal:
         """
         # In order to encrypt a message we just need the public key of the
         # receiver
-        if not receiver.get_public_key(generator, p):
+        if not receiver.get_public_key(generator, p, debug=debug):
             if debug:
                 print('Public key of %s is unknown' % str(receiver.name))
             return None
@@ -102,9 +122,9 @@ class ElGamal:
 
         if debug:
             if len(chunks) == 1:
-                print('No need to split the message for encrypting')
+                print('\nNo need to split the message for encrypting')
             else:
-                print('The message will be split in chunks of %d characters'
+                print('\nThe message will be split in chunks of %d characters'
                       % len(chunks[0]))
 
         encrypted_pairs = list()
@@ -333,14 +353,16 @@ class ElGamal:
 
     @staticmethod
     def sign(msg, sender, receiver, p, generator,
-             h=None, v=None, base=27, hash_fn=None, debug=False):
+             h=None, v=None, base=27, hash_fn=None,
+             encrypt_for_receiver=False, debug=False):
         """
         Signs a message using ElGamal.
 
-        The message will be signed by the sender and encrypted for the
-        receiver, generating a two tuples of two elements (signing a message
-        results in a tuple (r, s), encrypting each one of those elements
-        generates a new tuple).
+        If the signature of the message is encrypted for the receiver
+        afterwards (if encrypt_for_receiver is set to True), this function will
+        generate two tuples of two elements each (signing a message results in
+        a tuple (r, s), encrypting each one of those elements generates a new
+        tuple).
 
         msg: message to be signed.
         sender: ElGamal_Agent which will send the message.
@@ -355,6 +377,10 @@ class ElGamal:
            random number will be selected.
         base: number of symbols to be used in the alphabet. Currently supported
               26 (English) and 27 (Spanish)
+        encrypt_for_receiver: Whether the signature should be encrypted with
+                              the receiver's public key (False by default, as
+                              it is not customarily asked for in the
+                              exercises).
         debug: if set to True, the method will log all the steps used to reach
                the solution.
         """
@@ -506,6 +532,8 @@ class ElGamal:
                 print('\nThe result after assembling all blocks is: (r, s) = (%s, %s)'
                       %(result.r, result.s))
 
+        if not encrypt_for_receiver:
+            return result
 
         if debug:
             print('\n\nThe last step is to encrypt (r, s) individually with the '
