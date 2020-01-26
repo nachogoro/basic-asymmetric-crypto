@@ -569,5 +569,3 @@ class ElGamal:
                      encrypted_signed_pair.s.m_g_v_b))
 
         return encrypted_signed_pair
-
-

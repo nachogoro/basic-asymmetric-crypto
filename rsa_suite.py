@@ -336,5 +336,5 @@ class RSA:
         if debug:
             print('\nThe final result after assembling all blocks is: %s'
                   % result)
-        return result
 
+        return result
