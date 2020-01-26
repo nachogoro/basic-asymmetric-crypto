@@ -226,6 +226,8 @@ class RSA:
         if debug:
             print('\nThe final result is then: %s' % signature)
 
+        return signature
+
 
     @staticmethod
     def _encrypt(msg, key, n, base, debug, decrypt=False):
