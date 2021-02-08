@@ -303,7 +303,7 @@ class RSA:
                                  n=receiver.get_n(),
                                  base=base,
                                  debug=debug),
-                    receiver.get_public_key(),
+                    receiver.get_n(),
                     base,
                     debug=debug))
 
@@ -320,8 +320,14 @@ class RSA:
             print('\nFinally we simply assemble the signed chunks to obtain '
                   'the signature.')
 
-        signature = '(%s, %s)' % (msg,
-                                  ''.join(signed_chunks))
+        signature = (
+            '(%s, %s)'
+            % (msg,
+               RSA._assemble([encodingtools.get_as_number(e, base, debug)
+                              for e in signed_chunks],
+                             receiver.get_n(),
+                             base,
+                             debug)))
 
         if debug:
             print('\nThe final result is then: %s' % signature)
