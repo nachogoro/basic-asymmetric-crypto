@@ -2,6 +2,7 @@
 
 import mathtools
 import encodingtools
+import math
 
 class RSA_Agent:
     """
@@ -119,8 +120,34 @@ class RSA:
                 print('Public key or n of %s is unknown' % str(receiver.name))
             return None
 
-        return RSA._encrypt(msg=msg, key=receiver.get_public_key(),
-                            n=receiver.get_n(), base=base, debug=debug)
+        encrypted_numbers = RSA._encrypt(
+            msg=msg,
+            key=receiver.get_public_key(),
+            n=receiver.get_n(),
+            base=base,
+            debug=debug)
+
+        if len(encrypted_numbers) == 1:
+            if debug:
+                print('\nSince we didn\'t have to split the message, '
+                    'the result is simply %d as a string in base %d'
+                    % (encrypted_numbers[0], base))
+
+            result = encodingtools.get_as_string(
+                encrypted_numbers[0],
+                base,
+                debug=debug)
+
+            if debug:
+                print('\nThe resulting message is: %s' % result)
+            return result
+
+        result = RSA._assemble(encrypted_numbers,
+                  receiver.get_n(),
+                  base,
+                  debug=debug)
+
+        return result
 
 
     @staticmethod
@@ -129,7 +156,7 @@ class RSA:
         Decrypts a message using RSA.
 
         msg: message to be decrypted.
-        sender: RSA_Agent which sent the message. In RSA, he's irrevelant
+        sender: RSA_Agent which sent the message. In RSA, it's irrevelant
                 when it comes to decrypting.
         receiver: RSA_Agent which received the encrypted message.
         base: number of symbols to be used in the alphabet. Currently supported
@@ -144,10 +171,33 @@ class RSA:
                 print('Private key or n of %s is unknown' % str(receiver.name))
             return None
 
-        return RSA._encrypt(msg=msg, key=receiver.get_private_key(),
+        decrypted_chunks = RSA._encrypt(msg=msg, key=receiver.get_private_key(),
                             n=receiver.get_n(), base=base, decrypt=True,
                             debug=debug)
 
+        if len(decrypted_chunks) == 1:
+            if debug:
+                print('\nSince we didn\'t have to split the message, '
+                    'the result is simply %d as a string in base %d'
+                    % (decrypted_chunks[0], base))
+
+            result = encodingtools.get_as_string(
+                decrypted_chunks[0],
+                base,
+                debug=debug)
+
+            if debug:
+                print('\nThe resulting message is: %s' % result)
+            return result
+
+        result = RSA._assemble(decrypted_chunks,
+                  None,
+                  base,
+                  debug=debug)
+
+        if debug:
+            print('\nThe resulting message is: %s' % result)
+        return result
 
 
     @staticmethod
@@ -170,7 +220,7 @@ class RSA:
                  the hashed message as a string.
         encrypt_for_receiver: Whether the signature should be encrypted with
                               the receiver's public key (True by default, as it
-                              is normally asked for in exercises).
+                              is a weakness in RSA not to do it).
         debug: if set to True, the method will log all the steps used to reach
                the solution.
         """
@@ -210,18 +260,68 @@ class RSA:
             print('\nFirst step is to compute the rubric of the message (i.e. '
                   'encrypting the message with the sender\'s private key)')
 
-        rubric = RSA._encrypt(msg=msg_to_sign, key=sender.get_private_key(),
+        rubric_chunks = RSA._encrypt(msg=msg_to_sign, key=sender.get_private_key(),
                               n=sender.get_n(), base=base, debug=debug)
 
+        if debug:
+            print('\nWe obtain the following chunks for the rubric: '
+                  + str(rubric_chunks))
+
+
+
         if not encrypt_for_receiver:
-            return rubric
+            if len(rubric_chunks) == 1:
+                return encodingtools.get_as_string(
+                    rubric_chunks[0],
+                    base,
+                    debug=debug)
+
+            return RSA._assemble(rubric_chunks,
+                                 sender.get_n(),
+                                 base,
+                                 debug=debug)
 
         if debug:
-            print('\nFinally, we need to encrypt the rubric '
-                  'with the receiver\'s public key')
+            print(
+                '\nWe now need to encrypt each chunk of the rubric '
+                'individually with the receiver\'s public key to avoid attacks.')
 
-        signature = RSA._encrypt(msg=rubric, key=receiver.get_public_key(),
-                                 n=receiver.get_n(), base=base, debug=debug)
+        signed_chunks = list()
+
+        for chunk in rubric_chunks:
+            if debug:
+                print('\nEncoding chunk %d (%s):'
+                      % (chunk,
+                         encodingtools.get_as_string(chunk, base, False)))
+
+            signed_chunks.append(
+                RSA._assemble(
+                    RSA._encrypt(msg=encodingtools.get_as_string(chunk,
+                                                                 base,
+                                                                 False),
+                                 key=receiver.get_public_key(),
+                                 n=receiver.get_n(),
+                                 base=base,
+                                 debug=debug),
+                    receiver.get_public_key(),
+                    base,
+                    debug=debug))
+
+        if len(signed_chunks) == 1:
+            signature = '(%s, %s)' % (msg,
+                                      signed_chunks[0])
+
+            if debug:
+                print('\nSince we didn\'t need to split the message, '
+                      'the signature is simply %s' % signature)
+            return signature
+
+        if debug:
+            print('\nFinally we simply assemble the signed chunks to obtain '
+                  'the signature.')
+
+        signature = '(%s, %s)' % (msg,
+                                  ''.join(signed_chunks))
 
         if debug:
             print('\nThe final result is then: %s' % signature)
@@ -235,7 +335,10 @@ class RSA:
         Private method. Applies a given key to a message, which can be used for
         encrypting, decrypting or signing.
 
-        msg: message to be encrypted.
+        Returns the individual chunks of the messages, for the caller to
+        assemble as they see fit.
+
+        msg: message to be encrypted. It can be in string or numeric form.
         key: key to be used for encryption.
         n: modulo for the encryption operations.
         base: number of symbols to be used in the alphabet. Currently supported
@@ -246,24 +349,42 @@ class RSA:
         (necessary to determine the size of the chunks in which the message
         needs to be split).
         """
-        msg = msg.upper()
+        if type(msg) is str:
+            msg_string = msg.upper()
+            msg_number = encodingtools.get_as_number(
+                msg_string,
+                base,
+                debug=debug)
+        else:
+            # msg is an int
+            msg_number = msg
+            msg_string = encodingtools.get_as_string(
+                msg_number,
+                base,
+                debug=debug)
 
-        if not encodingtools.validate_message(msg, base):
+        if not encodingtools.validate_message(msg_string, base):
             if debug:
                 print('%s cannot be encoded in base %s (only A-Z)'
                       % (msg, base))
             return None
 
         # Divide message in chunks if necessary
-        chunks = encodingtools.get_msg_chunks(msg, base, n,
-                                              round_down=(not decrypt))
+        if msg_number < n:
+            chunks = [msg_string]
+        else:
+            chunks = encodingtools.get_msg_chunks(msg_string, base, n,
+                                                  round_down=(not decrypt))
 
         if debug:
             if len(chunks) == 1:
-                print('No need to split the message')
+                print('Since %d is smaller than %d, '
+                      'there is no need to split the message'
+                      % (msg_number, n))
             else:
-                print('The message will be split in chunks of %d characters'
-                      % len(chunks[0]))
+                print('Since %d is not smaller than %d, the message will '
+                      'be split in chunks of %d characters'
+                      % (msg_number, n, len(chunks[0])))
 
         encrypted_numbers = list()
 
@@ -286,45 +407,60 @@ class RSA:
                                     debug=debug))
 
             if debug:
-                print('\n%s gets converted to %d'
+                print('\n%s gets converted to %d (\'%s\')'
                       % (chunk,
-                         encrypted_numbers[-1]))
+                         encrypted_numbers[-1],
+                         encodingtools.get_as_string(encrypted_numbers[-1],
+                                                     base,
+                                                     False)))
 
-        if len(encrypted_numbers) == 1:
-            if debug:
-                print('\nSince we didn\'t have to split the message, '
-                    'the result is simply %d as a string in base %d'
-                    % (encrypted_numbers[0], base))
+        return encrypted_numbers
 
-            result = encodingtools.get_as_string(
-                encrypted_numbers[0],
+
+    @staticmethod
+    def _assemble(chunks_as_numbers, n, base, debug):
+        """
+        Private method. Assembles a series of numeric chunks, which are being
+        encrypted/decrypted for the specified modulo n.
+
+        It pads the chunks with 'A' to the left as necessary.
+
+        If no n is specified, it is assumed it's a decryption operation and no
+        padding is necessary.
+        """
+
+        if len(chunks_as_numbers) == 1:
+            return encodingtools.get_as_string(
+                chunks_as_numbers[0],
                 base,
-                debug=debug)
+                False)
 
-            if debug:
-                print('\nThe resulting message is: %s' % result)
-            return result
+        # If no n is provided, we are decrypting and no padding is necessary.
+        # If an n is provided, we are encrypting/signing and need to pad to one
+        # letter more than the plain text chunk
+        if n:
+            padded_length = int(math.log(n, base)) + 1
+        else:
+            padded_length = None
 
-        # More than one chunk, they need to be padded if we are encrypting for
-        # sending
         if debug:
-            if decrypt:
-                print('\nFinally, we assemble all the decrypted chunks\n')
+            if not padded_length:
+                print('\nFinally, we assemble all the chunks\n')
             else:
-                print('\nFinally, we assemble all the encrypted chunks, '
+                print('\nFinally, we assemble all the chunks, '
                     'padding each one with A (0) up to %d characters\n'
-                    % (len(chunks[0]) + 1))
+                    % padded_length)
 
         result = ''
-        for number in encrypted_numbers:
+        for number in chunks_as_numbers:
             number_as_string = encodingtools.get_as_string(
                 number,
                 base,
                 debug=debug)
 
             # Pad with 'A' until one character more than the plan text chunk
-            if not decrypt:
-                padded = number_as_string.rjust(len(chunks[0]) + 1, 'A')
+            if padded_length:
+                padded = number_as_string.rjust(padded_length, 'A')
 
                 if debug:
                     print('\n%s is %s after padding\n'  % (number_as_string, padded))
@@ -338,3 +474,4 @@ class RSA:
                   % result)
 
         return result
+

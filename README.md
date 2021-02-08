@@ -120,17 +120,3 @@ messages.
 does not affect the resulting cryptogram. Among other things, this means that
 it is generally not possible to know if a decrypted message originally
 contained a series of 'A' symbols at the beginning.
-* The method used in this library differs from the one proposed in the subject
-  when it comes to RSA-signing a message which needs to be split into
-  chunks in order to obtain the rubric:
-  1. The proposed method is to sign each rubric chunk independently.  The
-     resulting signature blocks are then assembled (with the appropriate
-     padding) to form the signature.
-  2. The method implemented first assembles the rubric chunks (padding them)
-     into a single rubric. This rubric is then signed by being itself split
-     into chunks if necessary.
-
-  The first method results in a slightly simpler encryption algorithm, and
-  oftentimes in shorter signatures. The implemented method, however, results in
-  a much simpler decryption scheme, particularly when the sizes of n vary
-  greatly between receiver and sender.
