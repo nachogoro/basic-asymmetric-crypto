@@ -130,7 +130,7 @@ def get_coprime_in_range(n):
     Returns a number in the range [2-n) which is coprime with n
     """
     if (n % 2) != 0:
-        # The number is even, which means that it will be coprime with any
+        # The number is odd, which means that it will be coprime with any
         # power of two
         max_exp = int(math.log(n, 2))
         random_exp = random.randrange(max_exp)
