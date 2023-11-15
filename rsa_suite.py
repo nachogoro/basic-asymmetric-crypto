@@ -299,15 +299,11 @@ class RSA:
 
         for chunk in rubric_chunks:
             if debug:
-                print('\nEncoding chunk %d (%s):'
-                      % (chunk,
-                         encodingtools.get_as_string(chunk, base, False)))
+                print(f'\nEncoding chunk {chunk}:')
 
             signed_chunks.append(
                 RSA._assemble(
-                    RSA._encrypt(msg=encodingtools.get_as_string(chunk,
-                                                                 base,
-                                                                 False),
+                    RSA._encrypt(msg=chunk,
                                  key=receiver.get_public_key(),
                                  n=receiver.get_n(),
                                  base=base,
@@ -319,12 +315,11 @@ class RSA:
                     debug=debug))
 
         if len(signed_chunks) == 1:
-            signature = '(%s, %s)' % (msg,
-                                      signed_chunks[0])
+            signature = signed_chunks[0]
 
             if debug:
                 print('\nSince we didn\'t need to split the message, '
-                      'the signature is simply %s' % signature)
+                      f'the signature is simply {signature}')
             return signature
 
         if debug:
@@ -374,14 +369,14 @@ class RSA:
             msg_number = encodingtools.get_as_number(
                 msg_string,
                 base,
-                debug=debug)
+                debug=False)
         else:
             # msg is an int
             msg_number = msg
             msg_string = encodingtools.get_as_string(
                 msg_number,
                 base,
-                debug=debug)
+                debug=False)
 
         if not encodingtools.validate_message(msg_string, base):
             if debug:
@@ -410,15 +405,16 @@ class RSA:
 
         # Encode each chunk individually
         for chunk in chunks:
+            show_conversion_to_number = debug and (type(msg) is str or len(chunks) > 1)
             chunk_number = encodingtools.get_as_number(
-                chunk, base=base, debug=debug)
+                chunk, base=base, cache=cached_conversions, debug=show_conversion_to_number)
 
             if debug:
-                print('\nTransforming %s into c = %d^%d (mod %d)'
-                      % (chunk,
-                         chunk_number,
-                         key,
-                         n))
+                if type(msg) is str or len(chunks) > 1:
+                    displayed_value = chunk
+                else:
+                    displayed_value = chunk_number
+                print(f'\nTransforming {displayed_value} into c = {chunk_number}^{key} (mod {n})')
 
             encrypted_numbers.append(
                 mathtools.quick_exp(chunk_number,
@@ -427,15 +423,9 @@ class RSA:
                                     debug=debug))
 
             if debug:
-                print('\n%s gets converted to %d (\'%s\')'
-                      % (chunk,
-                         encrypted_numbers[-1],
-                         encodingtools.get_as_string(encrypted_numbers[-1],
-                                                     base,
-                                                     False)))
+                print(f'\n{displayed_value} gets converted to {encrypted_numbers[-1]}\n')
 
         return encrypted_numbers
-
 
     @staticmethod
     def _assemble(chunks_as_numbers, n, base, cached_conversions=None, debug=False):
