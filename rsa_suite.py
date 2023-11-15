@@ -4,10 +4,12 @@ import mathtools
 import encodingtools
 import math
 
+
 class RSA_Agent:
     """
     Class representing one side in an RSA communication.
     """
+
     def __init__(self, name, p=None, q=None, n=None, phi_n=None,
                  e=None, d=None):
         """
@@ -36,23 +38,22 @@ class RSA_Agent:
             raise Exception('Inconsistent values n, p and q ({} != {}*{})'
                             .format(n, p, q))
 
-        if p and q and phi_n and (phi_n != (p-1)*(q-1)):
+        if p and q and phi_n and (phi_n != (p - 1) * (q - 1)):
             raise Exception(
                 'Inconsistent values phi_n, p and q ({} != ({}-1)*({}-1))'
-                .format(phi_n, p, q))
+                    .format(phi_n, p, q))
 
         tmp_phi_n = None
 
         if (p and q):
-            tmp_phi_n = (p-1)*(q-1)
+            tmp_phi_n = (p - 1) * (q - 1)
         elif phi_n:
             tmp_phi_n = phi_n
 
         if tmp_phi_n:
-            if e and d and ((e*d % tmp_phi_n) != 1):
+            if e and d and ((e * d % tmp_phi_n) != 1):
                 raise Exception(
                     'Inconsistent values: e is not the inverse of d in phi_n')
-
 
     def get_n(self):
         """
@@ -63,16 +64,14 @@ class RSA_Agent:
 
         return self.n
 
-
     def get_phi_n(self):
         """
         Returns phi(n), i.e. (p-1)*(q-1)
         """
         if not self.phi_n and self.p and self.q:
-            self.phi_n = (self.p - 1)*(self.q - 1)
+            self.phi_n = (self.p - 1) * (self.q - 1)
 
         return self.phi_n
-
 
     def get_private_key(self):
         """
@@ -94,18 +93,18 @@ class RSA_Agent:
 
         return self.e
 
+
 class RSA:
     """
     Container class for the main operations to be performed by RSA
     """
-
     @staticmethod
     def encrypt(msg, sender, receiver, base=27, debug=False):
         """
         Encrypts a message using RSA.
 
         msg: message to be encrypted.
-        sender: RSA_Agent which will send the message. In RSA, he's irrevelant
+        sender: RSA_Agent which will send the message. In RSA, it's irrevelant
                 when it comes to encrypting.
         receiver: RSA_Agent which will receive the message being encrypted.
         base: number of symbols to be used in the alphabet. Currently supported
@@ -133,8 +132,8 @@ class RSA:
         if len(encrypted_numbers) == 1:
             if debug:
                 print('\nSince we didn\'t have to split the message, '
-                    'the result is simply %d as a string in base %d'
-                    % (encrypted_numbers[0], base))
+                      'the result is simply %d as a string in base %d'
+                      % (encrypted_numbers[0], base))
 
             result = encodingtools.get_as_string(
                 encrypted_numbers[0],
@@ -183,8 +182,8 @@ class RSA:
         if len(decrypted_chunks) == 1:
             if debug:
                 print('\nSince we didn\'t have to split the message, '
-                    'the result is simply %d as a string in base %d'
-                    % (decrypted_chunks[0], base))
+                      'the result is simply %d as a string in base %d'
+                      % (decrypted_chunks[0], base))
 
             result = encodingtools.get_as_string(
                 decrypted_chunks[0],
@@ -268,13 +267,11 @@ class RSA:
                   'encrypting the message with the sender\'s private key)')
 
         rubric_chunks = RSA._encrypt(msg=msg_to_sign, key=sender.get_private_key(),
-                              n=sender.get_n(), base=base, debug=debug)
+                                     n=sender.get_n(), base=base, debug=debug)
 
         if debug:
             print('\nWe obtain the following chunks for the rubric: '
                   + str(rubric_chunks))
-
-
 
         if not encrypt_for_receiver:
             if len(rubric_chunks) == 1:
@@ -480,11 +477,11 @@ class RSA:
 
         if debug:
             if not padded_length:
-                print('\nFinally, we assemble all the chunks\n')
+                print('Finally, we assemble all the chunks\n')
             else:
-                print('\nFinally, we assemble all the chunks, '
-                    'padding each one with A (0) up to %d characters\n'
-                    % padded_length)
+                print('Finally, we assemble all the chunks, '
+                      'padding each one with A (0) up to %d characters\n'
+                      % padded_length)
 
         result = ''
         for number in chunks_as_numbers:
@@ -499,15 +496,14 @@ class RSA:
                 padded = number_as_string.rjust(padded_length, 'A')
 
                 if debug:
-                    print('\n%s is %s after padding\n'  % (number_as_string, padded))
+                    print('%s is %s after padding\n' % (number_as_string, padded))
 
                 result += padded
             else:
                 result += number_as_string
 
         if debug:
-            print('\nThe final result after assembling all blocks is: %s'
+            print('The final result after assembling all blocks is: %s'
                   % result)
 
         return result
-
