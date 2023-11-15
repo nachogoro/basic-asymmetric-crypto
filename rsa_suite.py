@@ -113,6 +113,8 @@ class RSA:
         debug: if set to True, the method will log all the steps used to reach
                the solution.
         """
+        cached_conversions = dict()
+
         # In order to encrypt a message we just need the public key and n of the
         # receiver
         if not receiver.get_public_key() or not receiver.get_n():
@@ -125,6 +127,7 @@ class RSA:
             key=receiver.get_public_key(),
             n=receiver.get_n(),
             base=base,
+            cached_conversions=cached_conversions,
             debug=debug)
 
         if len(encrypted_numbers) == 1:
@@ -136,6 +139,7 @@ class RSA:
             result = encodingtools.get_as_string(
                 encrypted_numbers[0],
                 base,
+                cache=cached_conversions,
                 debug=debug)
 
             if debug:
@@ -143,12 +147,12 @@ class RSA:
             return result
 
         result = RSA._assemble(encrypted_numbers,
-                  receiver.get_n(),
-                  base,
-                  debug=debug)
+                               receiver.get_n(),
+                               base,
+                               cached_conversions=cached_conversions,
+                               debug=debug)
 
         return result
-
 
     @staticmethod
     def decrypt(msg, sender, receiver, base=27, debug=False):
@@ -164,6 +168,7 @@ class RSA:
         debug: if set to True, the method will log all the steps used to reach
                the solution.
         """
+        cached_conversions = dict()
         # In order to decrypt a message we just need the private key and n of
         # the receiver
         if not receiver.get_private_key() or not receiver.get_n():
@@ -172,8 +177,8 @@ class RSA:
             return None
 
         decrypted_chunks = RSA._encrypt(msg=msg, key=receiver.get_private_key(),
-                            n=receiver.get_n(), base=base, decrypt=True,
-                            debug=debug)
+                                        n=receiver.get_n(), cached_conversions=cached_conversions,
+                                        base=base, decrypt=True, debug=debug)
 
         if len(decrypted_chunks) == 1:
             if debug:
@@ -184,6 +189,7 @@ class RSA:
             result = encodingtools.get_as_string(
                 decrypted_chunks[0],
                 base,
+                cache=cached_conversions,
                 debug=debug)
 
             if debug:
@@ -191,14 +197,14 @@ class RSA:
             return result
 
         result = RSA._assemble(decrypted_chunks,
-                  None,
-                  base,
-                  debug=debug)
+                               None,
+                               base,
+                               cached_conversions=cached_conversions,
+                               debug=debug)
 
         if debug:
             print('\nThe resulting message is: %s' % result)
         return result
-
 
     @staticmethod
     def sign(msg, sender, receiver, base=27, hash_fn=None,
@@ -224,6 +230,7 @@ class RSA:
         debug: if set to True, the method will log all the steps used to reach
                the solution.
         """
+        cached_conversions = dict()
         # In order to sign a message we need the public key and n of the
         # receiver and the private key and n of the sender
         if not receiver.get_public_key() or not receiver.get_n():
@@ -274,11 +281,13 @@ class RSA:
                 return encodingtools.get_as_string(
                     rubric_chunks[0],
                     base,
+                    cache=cached_conversions,
                     debug=debug)
 
             return RSA._assemble(rubric_chunks,
                                  sender.get_n(),
                                  base,
+                                 cached_conversions=cached_conversions,
                                  debug=debug)
 
         if debug:
@@ -302,9 +311,11 @@ class RSA:
                                  key=receiver.get_public_key(),
                                  n=receiver.get_n(),
                                  base=base,
+                                 cached_conversions=cached_conversions,
                                  debug=debug),
                     receiver.get_n(),
                     base,
+                    cached_conversions=cached_conversions,
                     debug=debug))
 
         if len(signed_chunks) == 1:
@@ -321,22 +332,22 @@ class RSA:
                   'the signature.')
 
         signature = (
-            '(%s, %s)'
-            % (msg,
-               RSA._assemble([encodingtools.get_as_number(e, base, debug)
-                              for e in signed_chunks],
-                             receiver.get_n(),
-                             base,
-                             debug)))
+                '(%s, %s)'
+                % (msg,
+                   RSA._assemble([encodingtools.get_as_number(e, base, cache=cached_conversions, debug=debug)
+                                  for e in signed_chunks],
+                                 receiver.get_n(),
+                                 base,
+                                 cached_conversions=cached_conversions,
+                                 debug=debug)))
 
         if debug:
             print('\nThe final result is then: %s' % signature)
 
         return signature
 
-
     @staticmethod
-    def _encrypt(msg, key, n, base, debug, decrypt=False):
+    def _encrypt(msg, key, n, base, debug, decrypt=False, cached_conversions=None):
         """
         Private method. Applies a given key to a message, which can be used for
         encrypting, decrypting or signing.
@@ -355,6 +366,9 @@ class RSA:
         (necessary to determine the size of the chunks in which the message
         needs to be split).
         """
+        if cached_conversions is None:
+            cached_conversions = dict()
+
         if type(msg) is str:
             msg_string = msg.upper()
             msg_number = encodingtools.get_as_number(
@@ -424,7 +438,7 @@ class RSA:
 
 
     @staticmethod
-    def _assemble(chunks_as_numbers, n, base, debug):
+    def _assemble(chunks_as_numbers, n, base, cached_conversions=None, debug=False):
         """
         Private method. Assembles a series of numeric chunks, which are being
         encrypted/decrypted for the specified modulo n.
@@ -435,11 +449,15 @@ class RSA:
         padding is necessary.
         """
 
+        if cached_conversions is None:
+            cached_conversions = dict()
+
         if len(chunks_as_numbers) == 1:
             return encodingtools.get_as_string(
                 chunks_as_numbers[0],
                 base,
-                False)
+                cache=cached_conversions,
+                debug=debug)
 
         # If no n is provided, we are decrypting and no padding is necessary.
         # If an n is provided, we are encrypting/signing and need to pad to one
@@ -462,6 +480,7 @@ class RSA:
             number_as_string = encodingtools.get_as_string(
                 number,
                 base,
+                cache=cached_conversions,
                 debug=debug)
 
             # Pad with 'A' until one character more than the plan text chunk

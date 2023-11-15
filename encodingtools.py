@@ -66,7 +66,7 @@ def validate_message(msg, base):
     return True
 
 
-def get_as_number(msg, base, debug=False):
+def get_as_number(msg, base, cache=None, debug=False):
     """
     Given an alphabetic string, it will encode it in the specified base as a
     number.
@@ -75,6 +75,9 @@ def get_as_number(msg, base, debug=False):
 
     Only bases 26 and 27 supported at the moment.
     """
+    if cache and msg in cache:
+        return cache[msg]
+
     as_numbers = [letter_to_number(c, base) for c in msg]
     result = 0
 
@@ -91,10 +94,13 @@ def get_as_number(msg, base, debug=False):
             '%s can be expressed (in base %d) as: %s = %d'
             % (msg, base, ' + '.join(debug_rep), result))
 
+    if cache:
+        cache[msg] = result
+
     return result
 
 
-def get_as_string(number, base, debug=False):
+def get_as_string(number, base, cache=None, debug=False):
     """
     Given a number in the specified base, it will return its string
     representation.
@@ -103,6 +109,11 @@ def get_as_string(number, base, debug=False):
 
     Only bases 26 and 27 supported at the moment.
     """
+    if cache:
+        cached_result = next((key for key, val in cache.items() if val == number), None)
+        if cached_result:
+            return cached_result
+
     n = number
     letters_in_reverse = list()
     while n > 0:
@@ -137,6 +148,8 @@ def get_as_string(number, base, debug=False):
                   % (number, base, number, ' + '.join(debug_num_rep),
                      ' + '.join(debug_letter_rep), result))
 
+    if cache:
+        cache[result] = number
     return result
 
 
