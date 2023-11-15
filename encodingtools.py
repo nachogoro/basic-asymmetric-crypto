@@ -153,6 +153,13 @@ def get_as_string(number, base, cache=None, debug=False):
     return result
 
 
+def compute_block_size(n, base):
+    """
+    Returns the block size (in characters) associated with a certain number.
+    """
+    return int(math.log(n, base))
+
+
 def get_msg_chunks(msg, base, n, round_down=True):
     """
     Splits a message in a certain base in equally-sized chunks.
@@ -164,12 +171,12 @@ def get_msg_chunks(msg, base, n, round_down=True):
     what would be needed to ensure their number representation would be below
     n.
     """
-    chunk_size = int(math.log(n, base))
+    block_size = compute_block_size(n, base)
 
     if not round_down:
-        chunk_size += 1
+        block_size += 1
 
-    if chunk_size >= len(msg):
+    if block_size >= len(msg):
         return [msg]
 
-    return [msg[i:i+chunk_size] for i in range(0, len(msg), chunk_size)]
+    return [msg[i:i+block_size] for i in range(0, len(msg), block_size)]
