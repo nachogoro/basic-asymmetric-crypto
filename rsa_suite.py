@@ -98,6 +98,7 @@ class RSA:
     """
     Container class for the main operations to be performed by RSA
     """
+
     @staticmethod
     def encrypt(msg, sender, receiver, base=27, debug=False):
         """
@@ -196,8 +197,9 @@ class RSA:
             return result
 
         result = RSA._assemble(decrypted_chunks,
-                               None,
+                               receiver.get_n(),
                                base,
+                               encryption=False,
                                cached_conversions=cached_conversions,
                                debug=debug)
 
@@ -408,7 +410,8 @@ class RSA:
             if must_split:
                 print('there is no need to split the message')
             else:
-                print(f'the message has to be split in chunks of at max floor(log{base}({n})) = {block_size} characters')
+                print(
+                    f'the message has to be split in chunks of at max floor(log{base}({n})) = {block_size} characters')
 
             if must_split and type(msg) is int:
                 # We need to split a message which was originally a number. For that, we will turn it into a string
@@ -417,7 +420,6 @@ class RSA:
 
             if must_split:
                 print(f'The chunks are: {chunks}\n')
-
 
         encrypted_numbers = list()
 
@@ -446,7 +448,7 @@ class RSA:
         return encrypted_numbers
 
     @staticmethod
-    def _assemble(chunks_as_numbers, n, base, cached_conversions=None, debug=False):
+    def _assemble(chunks_as_numbers, n, base, encryption=True, cached_conversions=None, debug=False):
         """
         Private method. Assembles a series of numeric chunks, which are being
         encrypted/decrypted for the specified modulo n.
@@ -467,32 +469,34 @@ class RSA:
                 cache=cached_conversions,
                 debug=debug)
 
-        # If no n is provided, we are decrypting and no padding is necessary.
-        # If an n is provided, we are encrypting/signing and need to pad to one
-        # letter more than the plain text chunk
-        if n:
-            padded_length = int(math.log(n, base)) + 1
+        # If decrypting, we pad all blocks but the last one to the receiver's block size
+        # If encrypting, we pad to one letter more than the plain text chunk
+        block_size = encodingtools.compute_block_size(n, base)
+        if encryption:
+            padded_length = block_size + 1
         else:
-            padded_length = None
+            padded_length = block_size
 
         if debug:
-            if not padded_length:
-                print('Finally, we assemble all the chunks\n')
+            if encryption:
+                print('Finally, we assemble all the chunks, padding each one '
+                      f'with A (0) up to {padded_length} characters\n')
             else:
-                print('Finally, we assemble all the chunks, '
-                      'padding each one with A (0) up to %d characters\n'
-                      % padded_length)
+                print('Finally, we assemble all the chunks, padding all but '
+                      f'the last chunk with A (0) up to {padded_length} characters\n')
 
         result = ''
-        for number in chunks_as_numbers:
+        for block_index, number in enumerate(chunks_as_numbers):
+            is_last = block_index == len(chunks_as_numbers) - 1
+
             number_as_string = encodingtools.get_as_string(
                 number,
                 base,
                 cache=cached_conversions,
                 debug=debug)
 
-            # Pad with 'A' until one character more than the plan text chunk
-            if padded_length:
+            # Pad with 'A' appropriately
+            if not (not encryption and is_last):
                 padded = number_as_string.rjust(padded_length, 'A')
 
                 if debug:
