@@ -384,22 +384,43 @@ class RSA:
                       % (msg, base))
             return None
 
-        # Divide message in chunks if necessary
-        if msg_number < n:
-            chunks = [msg_string]
+        # Divide message in chunks if necessary. When encrypting a string, the relevant metric is whether the size in
+        # characters exceeds the recipient's block size. When encrypting a number, the relevant metric is whether it
+        # is greater than n or not This is, imo, inconsistent, but seems to be what's expected in the subject.
+        block_size = encodingtools.compute_block_size(n, base)
+        if type(msg) is str:
+            must_split = len(msg) > block_size
         else:
+            must_split = msg >= n
+
+        if must_split:
             chunks = encodingtools.get_msg_chunks(msg_string, base, n,
                                                   round_down=(not decrypt))
+        else:
+            chunks = [msg_string]
 
         if debug:
-            if len(chunks) == 1:
-                print('Since %d is smaller than %d, '
-                      'there is no need to split the message'
-                      % (msg_number, n))
+            if type(msg) is str:
+                print(
+                    f'Since the block size is floor(log{base}({n})) = {block_size} characters, '
+                    f'and our message is {len(msg_string)} characters long, ', end='')
             else:
-                print('Since %d is not smaller than %d, the message will '
-                      'be split in chunks of %d characters'
-                      % (msg_number, n, len(chunks[0])))
+                print(
+                    f'Since n={n} and the the message is {msg_number}, ', end='')
+
+            if must_split:
+                print('there is no need to split the message')
+            else:
+                print(f'the message has to be split in chunks of at max floor(log{base}({n})) = {block_size} characters')
+
+            if must_split and type(msg) is int:
+                # We need to split a message which was originally a number. For that, we will turn it into a string
+                # first. Do the conversion to display it (no need to store the result)
+                encodingtools.get_as_string(msg_number, base, cache=cached_conversions, debug=True)
+
+            if must_split:
+                print(f'The chunks are: {chunks}\n')
+
 
         encrypted_numbers = list()
 
