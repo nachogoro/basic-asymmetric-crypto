@@ -55,11 +55,16 @@ def sum_hash(msg, base, debug):
     """
     Hash function which simply sums the values of the characters in the message
     """
-    result = 0
-    for c in msg:
-        result = (result + encodingtools.letter_to_number(c, base)) % base
+    result = sum((encodingtools.letter_to_number(c, base) for c in msg)) % base
+    result_as_str = encodingtools.get_as_string(result, base, debug=False)
 
-    return encodingtools.number_to_letter(result, base)
+    if debug:
+        formatted_chars = [f'{c}' for c in msg]
+        numeric_list = [encodingtools.letter_to_number(c, base) for c in msg]
+        print(f'hash({msg}) = {" + ".join(formatted_chars)} = {" + ".join((str(n) for n in numeric_list))} = {result}')
+        encodingtools.get_as_string(result, base, debug=True)
+
+    return result_as_str
 
 # Then define the sender
 alberto = rsa_suite.RSA_Agent(
