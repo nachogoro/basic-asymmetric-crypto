@@ -334,7 +334,7 @@ class ElGamal:
                 print('\nWe simply need to encode it in base %d' % base)
 
             decrypted_chunks.append(
-                encodingtools.get_as_string(result, base, debug))
+                encodingtools.get_as_string(result, base, debug=debug))
 
             print()
 
@@ -353,16 +353,9 @@ class ElGamal:
 
     @staticmethod
     def sign(msg, sender, receiver, p, generator,
-             h=None, v=None, base=27, hash_fn=None,
-             encrypt_for_receiver=False, debug=False):
+             h=None, v=None, base=27, hash_fn=None, debug=False):
         """
         Signs a message using ElGamal.
-
-        If the signature of the message is encrypted for the receiver
-        afterwards (if encrypt_for_receiver is set to True), this function will
-        generate two tuples of two elements each (signing a message results in
-        a tuple (r, s), encrypting each one of those elements generates a new
-        tuple).
 
         msg: message to be signed.
         sender: ElGamal_Agent which will send the message.
@@ -377,10 +370,6 @@ class ElGamal:
            random number will be selected.
         base: number of symbols to be used in the alphabet. Currently supported
               26 (English) and 27 (Spanish)
-        encrypt_for_receiver: Whether the signature should be encrypted with
-                              the receiver's public key (False by default, as
-                              it is not customarily asked for in the
-                              exercises).
         debug: if set to True, the method will log all the steps used to reach
                the solution.
         """
@@ -437,7 +426,7 @@ class ElGamal:
         if debug:
             print('\nNow we encode r as a string:')
 
-        r_as_string = encodingtools.get_as_string(r, base, debug)
+        r_as_string = encodingtools.get_as_string(r, base, debug=debug)
 
         # Divide message in chunks if necessary
         chunks = encodingtools.get_msg_chunks(msg_to_sign, base, p,
@@ -531,9 +520,6 @@ class ElGamal:
             if debug:
                 print('\nThe result after assembling all blocks is: (r, s) = (%s, %s)'
                       %(result.r, result.s))
-
-        if not encrypt_for_receiver:
-            return result
 
         if debug:
             print('\n\nThe last step is to encrypt (r, s) individually with the '

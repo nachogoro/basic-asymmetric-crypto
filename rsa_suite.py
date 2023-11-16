@@ -208,8 +208,7 @@ class RSA:
         return result
 
     @staticmethod
-    def sign(msg, sender, receiver, base=27, hash_fn=None,
-             encrypt_for_receiver=True, debug=False):
+    def sign(msg, sender, receiver, base=27, hash_fn=None, debug=False):
         """
         Signs a message to be sent to an agent using RSA.
 
@@ -225,9 +224,6 @@ class RSA:
                  before signing it. It must take three parameters (message to
                  hash as a string, base to use and the debug flag) and return
                  the hashed message as a string.
-        encrypt_for_receiver: Whether the signature should be encrypted with
-                              the receiver's public key (True by default, as it
-                              is a weakness in RSA not to do it).
         debug: if set to True, the method will log all the steps used to reach
                the solution.
         """
@@ -274,20 +270,6 @@ class RSA:
         if debug:
             print('\nWe obtain the following chunks for the rubric: '
                   + str(rubric_chunks))
-
-        if not encrypt_for_receiver:
-            if len(rubric_chunks) == 1:
-                return encodingtools.get_as_string(
-                    rubric_chunks[0],
-                    base,
-                    cache=cached_conversions,
-                    debug=debug)
-
-            return RSA._assemble(rubric_chunks,
-                                 sender.get_n(),
-                                 base,
-                                 cached_conversions=cached_conversions,
-                                 debug=debug)
 
         if debug:
             print(
