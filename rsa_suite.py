@@ -407,7 +407,7 @@ class RSA:
                 print(
                     f'Since n={n} and the the message is {msg_number}, ', end='')
 
-            if must_split:
+            if not must_split:
                 print('there is no need to split the message')
             else:
                 print(
