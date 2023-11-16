@@ -1,6 +1,8 @@
 # Author: NachoGoro
 
 from collections import namedtuple
+from cryptouned.utils.io_explain import explain, explaining_method
+import math
 import random
 
 """
@@ -11,80 +13,66 @@ Extended_Euclides_Entry = namedtuple(
     ['y', 'g', 'u', 'v'])
 
 
-def compute_gcd(a, b, debug=False):
+@explaining_method
+def gcd(a, b):
     """
     Returns the result of: gcd(a, b)
-
-    If debug is set to True, it will print all the steps used to reach the
-    solution.
     """
     high = max(a, b)
     low = min(a, b)
 
-    if debug:
-        print('\ngcd({}, {}) = '.format(high, low), end='')
+    explain('\ngcd({}, {}) = '.format(high, low), end='')
 
     while low:
         high, low = low, high % low
 
-        if debug:
-            print('gcd({}, {}) = '.format(high, low), end='')
+        explain('gcd({}, {}) = '.format(high, low), end='')
 
-    if debug:
-        print(high)
+    explain(high)
 
     return high
 
 
-def quick_exp(a, b, p, debug=False):
+@explaining_method
+def fast_exp(a, b, p):
     """
     Returns the result of: a**b  mod p
-
-    If debug is set to True, it will print all the steps used to reach the
-    solution.
     """
-    if debug:
-        print('\nComputing %d ^ %d (mod %d)' % (a, b, p))
+    explain('\nComputing %d ^ %d (mod %d)' % (a, b, p))
 
     z = b
     x = a
     r = 1
     while z > 0:
-        if debug:
-            print('{0: <14}|{1: <14}|{2: <14}'.format(
-                ('r=%d' % r),
-                ('z=%d' % z),
-                ('x=%d' % x)))
+        explain('{0: <14}|{1: <14}|{2: <14}'.format(
+            ('r=%d' % r),
+            ('z=%d' % z),
+            ('x=%d' % x)))
 
         if z % 2 == 1:
             r = r*x % p
         x = x*x % p
         z //= 2
 
-    if debug:
-        print('{0: <14}|'.format('r=%d' % r))
+    explain('{0: <14}|'.format('r=%d' % r))
 
     return r
 
 
-def get_inverse(a, n, debug=False):
+@explaining_method
+def inverse(a, n):
     """
     Returns the value x which fulfills: x*a = 1 mod n
 
     If such a value does not exist, it returns None
-
-    If debug is set to True, it will print all the steps used to reach the
-    solution.
     """
-    if debug:
-        print('\nComputing the multiplicative inverse of %d in %d' % (a, n))
+    explain('\nComputing the multiplicative inverse of %d in %d' % (a, n))
 
-    if compute_gcd(a, n, debug) != 1:
-        if debug:
-            print('No inverse: {} and {} are not co-primes'.format(a, n))
+    if gcd(a, n) != 1:
+        explain('No inverse: {} and {} are not co-primes'.format(a, n))
         return None
-    elif debug:
-        print('%d and %d are coprimes, so the inverse exists\n' % (a, n))
+    else:
+        explain('%d and %d are co-primes, so the inverse exists\n' % (a, n))
 
     table = list()
     first_entry = Extended_Euclides_Entry(y=None, g=n, u=1, v=0)
@@ -108,24 +96,22 @@ def get_inverse(a, n, debug=False):
     potentially_negative_result = table[i-1].v
     result = potentially_negative_result % n
 
-    if debug:
-        # Print the whole development
-        print('{0: ^10}|{1: ^10}|{2: ^10}|{3: ^10}|{4: ^10}'.format(
-            'i', 'y', 'g', 'u', 'v'))
-        print('{0: ^10}|{0: ^10}|{0: ^10}|{0: ^10}|{0: ^10}'.format('-'*10))
-        for i, entry in enumerate(table):
-            print('{0: ^10}|{1: ^10}|{2: ^10}|{3: ^10}|{4: ^10}'.format(
-                i, entry.y if entry.y else '--', entry.g, entry.u, entry.v))
-            print('{0: ^10}|{0: ^10}|{0: ^10}|{0: ^10}|{0: ^10}'.format('-'*10))
+    # Print the whole development
+    explain('{0: ^10}|{1: ^10}|{2: ^10}|{3: ^10}|{4: ^10}'.format(
+        'i', 'y', 'g', 'u', 'v'))
+    explain('{0: ^10}|{0: ^10}|{0: ^10}|{0: ^10}|{0: ^10}'.format('-'*10))
+    for i, entry in enumerate(table):
+        explain('{0: ^10}|{1: ^10}|{2: ^10}|{3: ^10}|{4: ^10}'.format(
+            i, entry.y if entry.y else '--', entry.g, entry.u, entry.v))
+        explain('{0: ^10}|{0: ^10}|{0: ^10}|{0: ^10}|{0: ^10}'.format('-'*10))
 
-    if debug:
-        print('The inverse of %d in %d is then %d mod %d = %d'
-              % (a, n, potentially_negative_result, n, result))
+    explain('The inverse of %d in %d is then %d mod %d = %d'
+            % (a, n, potentially_negative_result, n, result))
 
     return result
 
 
-def get_coprime_in_range(n):
+def random_coprime(n):
     """
     Returns a number in the range [2-n) which is coprime with n
     """
@@ -145,7 +131,7 @@ def get_coprime_in_range(n):
     if candidate <= 2:
         candidate = 3
 
-    while compute_gcd(n, candidate, debug=False) != 1:
+    while gcd(n, candidate) != 1:
         # Use steps of 2 to avoid even numbers
         candidate = (candidate + 2) % n
 

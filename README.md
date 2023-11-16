@@ -11,117 +11,91 @@ calculations, as well as help them ensure their results are correct.
 
 ## What does it do?
 It gives a simple Python interface to encrypt, decrypt and sign messages using
-these assymetric encryption schemes, as well as provide tools to perform the
+these asymmetric encryption schemes, as well as provide tools to perform the
 most common computations (retrieving the GCD of two numbers, raising a number
 to a large power, finding the multiplicative modular inverse, etc.).
 
-What is interesting of this project is that every method can be passed a
-`debug` flag which will in turn make the method log every single step it
+What is interesting of this project is that all methods decorated with
+`@explaining_method` (which are most of them) can be passed an optional
+`explain` flag, which will in turn make the method log every single step it
 follows to reach the solution. This way, it's easy to see what is going on, and
 compare one's answer with the one provided by the toolset, to see where they
 diverge.
 
 ## How to use it
-Every method is documented, so usage should be straight forward.
+### Encrypting, decrypting and signing
+In order to perform encryption/decryption and signing operations with RSA and
+ElGamal, please see the examples in the `examples/` directory.
 
-The methods provided in `mathtools.py` are very straight forward. For example,
-see how to compute `7` to the power of `65` modulo `5` using the quick
-exponentiation algorithm, step by step:
-```python
->>> import mathtools
->>> mathtools.quick_exp(7, 65, 5, debug=True)
-r=1           |z=65          |x=7           
-r=2           |z=32          |x=4           
-r=2           |z=16          |x=1           
-r=2           |z=8           |x=1           
-r=2           |z=4           |x=1           
-r=2           |z=2           |x=1           
-r=2           |z=1           |x=1           
-r=2           |
-2
-```
+You can tweak any of them easily to get the solution to your particular
+problem.
 
-For the encryption schemes defined in `rsa_suite.py` and `elgamal_suite.py`,
-one only needs to create the agents of the communication and then invoke the
-relevant method:
-```python
-# Example code for signing with RSA using a hash function which sums the values
-# of the digits in a string.
-import rsa_suite
-import encodingtools
+### Modular arithmetic
+You may be interested in using the library to check certain mathematic
+operations. The library may explain, step by step, the following operations:
+* Finding the greatest common denominator of two numbers, using Euclides'
+  algorithm.
+* Raising a number *a* to the power of number *b*, modulo *c*, using the fast
+  exponentiation algorithm.
+* Finding the multiplicative inverse of a number *a* in modulo *b*, using
+  Euclides' extended algorithm.
 
-# First define the hash function
-def sum_hash(msg, base, debug):
-    """
-    Hash function which simply sums the values of the characters in the message
-    """
-    result = sum((encodingtools.letter_to_number(c, base) for c in msg)) % base
-    result_as_str = encodingtools.get_as_string(result, base, debug=False)
-
-    if debug:
-        formatted_chars = [f'{c}' for c in msg]
-        numeric_list = [encodingtools.letter_to_number(c, base) for c in msg]
-        print(f'hash({msg}) = {" + ".join(formatted_chars)} = {" + ".join((str(n) for n in numeric_list))} = {result}')
-        encodingtools.get_as_string(result, base, debug=True)
-
-    return result_as_str
-
-# Then define the sender
-alberto = rsa_suite.RSA_Agent(
-    name='Alberto',
-    n=34121,
-    e=15775,
-    d=26623,
-    p=229,
-    q=149)
-
-# ... and the receiver
-barbara = rsa_suite.RSA_Agent(
-    name='Barbara',
-    n=46927,
-    e=39423)
-
-# Finally, sign the message
-rsa_suite.RSA.sign(msg='UNED', sender=alberto, receiver=barbara, base=27,
-         hash_fn=sum_hash, debug=True)
-```
+The following snippets show how to compute each of those operations, all
+defined in `cryptouned.utils.modmath`:
 
 ```python
-# Example code to encrypt with ElGamal
-import elgamal_suite
-import encodingtools
+from cryptouned.utils.modmath import gcd, inverse, fast_exp
 
-alberto = elgamal_suite.ElGamal_Agent(
-    name='Alberto',
-    private_key=28236)
+# Compute the greatest common denominator of 65 and 40
+gcd(65, 40, explain=True)
 
-bono = elgamal_suite.ElGamal_Agent(
-    name='Bono',
-    private_key=21702)
+# Compute 7^65 mod 13
+fast_exp(7,65, 13, explain=True)
 
-msg_pair = elgamal_suite.ElGamal.encrypt(
-    'HIJO', sender=alberto, receiver=bono, p=15485863, generator=7,
-    v=480, base=26, debug=True)
+# Compute the multiplicative inverse of 13 in 27
+inverse(13, 27, explain=True)
 ```
 
-The code attempts to be as flexible as possible, so that different pieces of
-data can be inferred from others. For example, there is no need to specify `n`
-for an `RSA_Agent` if `p` and `q` are provided. Also, although for clarity all
-methods require a sender and a receiver, since some operations only require one
-of them (no need to know who is encrypting a message if it is not signed, for
-example), one can specify those parameters as `None` and the code will not
-complain.
+The `explain=True` flag can be removed, and the methods will simply return the
+result without logging any explanation.
 
-The code has deliberately been made flexible so that one can give all the data
-provided in an exercise and see how to derive the necessary data to perform the
-requested task (i.e. to minimize user's work).
+## Design philosophy
+The principal aim of this project is to be useful to students of the subject.
+Hence, it attempts to be as flexible as possible when it comes to solving
+exercises with the data given in the exercises. It tries to infer information
+reasonably if given, and ignores redudnant pieces of data. For example, there
+is no need to specify `n` for an `RSA_Agent` if `p` and `q` are provided. Also,
+although for clarity all methods require a sender and a receiver, since some
+operations only require one of them (no need to know who is encrypting a
+message if it is not signed, for example), one can specify those parameters as
+`None` and the code will not complain.
 
-## Limitations
+## Limitations and known issues
 * The code is limited to using base 26 (English) or 27 (Spanish, including Ñ).
-* For simplicity, the code is case-insensitive when it comes to dealing with
-messages.
-* The encoding mechanism proposed in the subject assigns the letter A a value
-  of 0. This means that a letter A at the beginning of a block to be encrypted
-does not affect the resulting cryptogram. Among other things, this means that
-it is generally not possible to know if a decrypted message originally
-contained a series of 'A' symbols at the beginning.
+  **Non-letter symbols are not allowed.**
+* For simplicity, the code is **case-insensitive** when it comes to dealing
+  with messages.
+* No method has been provided in the subject to "split" integers into blocks
+  when necessary. The library converts the integer to a string for that, but
+  other methods may be preferred.
+* **RSA signatures may not be verifiable if the receiver's key is shorter than
+  the sender's**.
+
+  The sender must split the string message into blocks and transform them with
+  their private key to compute the rubric blocks (which are numbers). Each of
+  those rubric blocks will be a number between 0 and the sender's n.
+
+  According to the bibliography of the subject, the rubric blocks must be
+  *individually* encrypted with the receiver's public key to obtain the
+  signature blocks. The criterion used to determine whether a certain rubric
+  block is to be split into smaller blocks or not before encrypting it with the
+  receiver's public key is to check whether it is larger than the receiver's
+  *n* or not.
+
+  If the receiver's *n* is smaller than the sender's *n*, some blocks of the
+  rubric may need to be split, while others may not. So each rubric block will
+  be split into an indeterminate number of signature blocks.
+
+  In order to verify the signature, the receiver needs to retrieve the rubric
+  blocks from the signature blocks. But since each rubric block may have turned
+  into a different number of signature blocks, that task is now impossible.
