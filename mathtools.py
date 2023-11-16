@@ -94,7 +94,7 @@ def get_inverse(a, n, debug=False):
     table.append(second_entry)
 
     i = 2
-    while table[i-1].g != 0:
+    while table[i-1].g != 1:
         y = table[i-2].g // table[i-1].g
 
         table.append(Extended_Euclides_Entry(
@@ -105,7 +105,7 @@ def get_inverse(a, n, debug=False):
 
         i += 1
 
-    potentially_negative_result = table[i-2].v
+    potentially_negative_result = table[i-1].v
     result = potentially_negative_result % n
 
     if debug:
