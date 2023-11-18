@@ -111,61 +111,90 @@ class ElGamal:
                       % (msg, base))
             return None
 
-        if not v:
-            v = randrange(p)
-            if debug:
-                print('v not set, selecting random number v = %d' % v)
+        if debug:
+            print('\nIn ElGamal, the cryptogram is a pair (g^v mod p, m·B^v mod'
+                  ' p), where g is the generator, p is the prime, m is the'
+                  ' message, v is the random number used for encryption and B'
+                  ' is the receiver\'s public key')
 
-        # Divide message in chunks if necessary
-        chunks = encodingtools.get_msg_chunks(msg, base, p,
-                                              round_down=True)
+        block_size = encodingtools.compute_block_size(p, base)
+        if type(msg) is str:
+            must_split = len(msg) > block_size
+        else:
+            must_split = msg >= p
+
+        if must_split:
+            chunks = encodingtools.get_msg_chunks(msg, base, p,
+                                                  round_down=True)
+        else:
+            chunks = [msg]
 
         if debug:
-            if len(chunks) == 1:
-                print('\nNo need to split the message for encrypting')
+            if type(msg) is str:
+                print(
+                    f'Since the block size is floor(log{base}({p})) = {block_size} characters, '
+                    f'and our message is {len(msg)} characters long, ', end='')
             else:
-                print('\nThe message will be split in chunks of %d characters'
-                      % len(chunks[0]))
+                print(
+                    f'Since p={p} and the the message is {msg_number}, ', end='')
+
+            if not must_split:
+                print('there is no need to split the message')
+            else:
+                print(
+                    f'the message has to be split in chunks of at max floor(log{base}({p})) = {block_size} characters')
+
+            if must_split and type(msg) is int:
+                # We need to split a message which was originally a number. For that, we will turn it into a string
+                # first. Do the conversion to display it (no need to store the result)
+                encodingtools.get_as_string(msg_number, base, cache=cached_conversions, debug=True)
+
+            if must_split:
+                print(f'The chunks are: {chunks}\n')
 
         encrypted_pairs = list()
 
+        if debug and len(chunks) > 1 and v:
+            print('All chunks will be encrypted with the same v (this is a security concern)')
+
         # Encode each chunk individually
         for chunk in chunks:
+            v_for_block = v
+
+            if not v_for_block:
+                v_for_block = randrange(2, p)
+                if debug:
+                    print('v not set, selecting random number v = %d' % v_for_block)
+
             chunk_number = encodingtools.get_as_number(
                 chunk, base=base, debug=debug)
 
             if debug:
-                print('\nEncrypting %s as (%d^%d, %d*%d^%d)'
-                      % (chunk,
-                         generator,
-                         v,
-                         chunk_number,
-                         receiver.get_public_key(generator, p),
-                         v))
+                print(f'\nEncrypting {chunk} as ('
+                      f'{generator}^{v_for_block} mod {p}, '
+                      f'{chunk_number}*{receiver.get_public_key(generator, p)}^{v_for_block} mod {p})')
 
-            encrypted_pairs.append(
-                Encrypted_Pair(
-                    g_v=mathtools.quick_exp(generator, v, p, debug=debug),
-                    m_g_v_b=(
-                        chunk_number*mathtools.quick_exp(
-                            receiver.get_public_key(generator, p),
-                            v,
-                            p,
-                            debug=debug) % p)))
+            g_v=mathtools.quick_exp(generator, v_for_block, p, debug=debug)
+            g_v_b = mathtools.quick_exp(receiver.get_public_key(generator, p),
+                                        v_for_block,
+                                        p,
+                                        debug=debug)
+            m_g_v_b = chunk_number * g_v_b % p
+            if debug:
+                print(f'\n{chunk_number}*{g_v_b} mod {p} = {m_g_v_b}')
+
+
+            encrypted_pairs.append(Encrypted_Pair(g_v=g_v, m_g_v_b=m_g_v_b))
 
             if debug:
-                print('\n%s gets encrypted to (%d, %d)'
-                      % (chunk,
-                         encrypted_pairs[-1].g_v,
-                         encrypted_pairs[-1].m_g_v_b))
+                print(f'\n{chunk} gets encrypted to ({g_v}, {m_g_v_b})\n')
 
         if len(encrypted_pairs) == 1:
             if debug:
                 print('\nSince we didn\'t have to split the message, '
-                    'the result is simply (%d, %d) as a string in base %d'
-                    % (encrypted_pairs[0].g_v,
-                       encrypted_pairs[0].m_g_v_b,
-                       base))
+                      'the result is simply '
+                      f'({encrypted_pairs[0].g_v}, {encrypted_pairs[0].m_g_v_b}) '
+                      f'as strings in base {base}')
 
             result = Encrypted_Pair(
                 g_v=encodingtools.get_as_string(
@@ -183,8 +212,7 @@ class ElGamal:
                       % (result.g_v, result.m_g_v_b))
             return result
 
-        # More than one chunk, they need to be padded if we are encrypting for
-        # sending
+        # More than one chunk, they need to be padded
         if debug:
             print('\nFinally, we assemble all the encrypted chunks, '
                   'padding each one with A (0) up to %d characters\n'
@@ -213,9 +241,9 @@ class ElGamal:
                       % (pair_as_string.g_v, pair_as_string.m_g_v_b,
                          padded.g_v, padded.m_g_v_b))
 
-                result = Encrypted_Pair(
-                    g_v=result.g_v + padded.g_v,
-                    m_g_v_b=result.m_g_v_b + padded.m_g_v_b)
+            result = Encrypted_Pair(
+                g_v=result.g_v + padded.g_v,
+                m_g_v_b=result.m_g_v_b + padded.m_g_v_b)
 
         if debug:
             print('\nThe final result after assembling all blocks is: (%s, %s)'
@@ -260,25 +288,21 @@ class ElGamal:
                       % (msg_pair.g_v, msg_pair.m_g_v_b, base))
             return None
 
-        # Divide message pair in chunks if necessary. For this, both parts of
-        # the message need to be of the same length
-        max_length = max(len(msg_pair.g_v), len(msg_pair.m_g_v_b))
-
         if debug:
-            print('For decoding, both parts of the message need to be the same length.')
-            print('We pad the shortest one with A on the left as necessary')
-            print('After padding, the message is: (%s, %s)'
-                  % (msg_pair.g_v.rjust(max_length, 'A'),
-                     msg_pair.m_g_v_b.rjust(max_length, 'A')))
+            # Continue here
+            block_size = floor(log())
+            print(f'Decrypting pair ({msg_pair.g_v}, {msg_pair.m_g_v_b})')
+            print('Block size for the shared prime is floor(log27({p})) =  ')
 
+        # Divide message pair in chunks if necessary.
         gv_chunks = encodingtools.get_msg_chunks(
-            msg_pair.g_v.rjust(max_length, 'A'),
+            msg_pair.g_v,
             base,
             p,
             round_down=False)
 
         mgvb_chunks = encodingtools.get_msg_chunks(
-            msg_pair.m_g_v_b.rjust(max_length, 'A'),
+            msg_pair.m_g_v_b,
             base,
             p,
             round_down=False)
@@ -288,7 +312,7 @@ class ElGamal:
                 print('\nNo need to split the message for decrypting\n')
             else:
                 print('\nThe message will be split in chunks of %d characters\n'
-                      % len(chunks[0]))
+                      % len(gv_chunks[0]))
 
         decrypted_chunks = list()
 
@@ -301,9 +325,8 @@ class ElGamal:
                 print('\nWe need to encode g^v (%s) and m*(g^b)^v (%s) as a number'
                       % (gv_chunk, mgvb_chunk))
 
-            gv_as_number = encodingtools.get_as_number(gv_chunk, base, debug)
-            mgvb_as_number = encodingtools.get_as_number(mgvb_chunk,
-                                                         base, debug)
+            gv_as_number = encodingtools.get_as_number(gv_chunk, base, debug=debug)
+            mgvb_as_number = encodingtools.get_as_number(mgvb_chunk, base, debug=debug)
 
             if debug:
                 print('\nWe need to compute (g^v)^b mod p (%d^%d mod %d)'
@@ -353,7 +376,7 @@ class ElGamal:
 
     @staticmethod
     def sign(msg, sender, receiver, p, generator,
-             h=None, v=None, base=27, hash_fn=None, debug=False):
+             h=None, base=27, hash_fn=None, debug=False):
         """
         Signs a message using ElGamal.
 
@@ -521,37 +544,4 @@ class ElGamal:
                 print('\nThe result after assembling all blocks is: (r, s) = (%s, %s)'
                       %(result.r, result.s))
 
-        if debug:
-            print('\n\nThe last step is to encrypt (r, s) individually with the '
-                  'public key of the receiver)')
-
-        encrypted_signed_pair = Signed_Pair(
-            r=ElGamal.encrypt(
-                msg=result.r,
-                sender=sender,
-                receiver=receiver,
-                p=p,
-                generator=generator,
-                v=v,
-                base=base,
-                debug=debug),
-            s=ElGamal.encrypt(
-                msg=result.s,
-                sender=sender,
-                receiver=receiver,
-                p=p,
-                generator=generator,
-                v=v,
-                base=base,
-                debug=debug))
-
-        if debug:
-            print('\n(r, s) (%s, %s) gets finally encrypted to ((%s, %s), (%s, %s))'
-                  % (result.r,
-                     result.s,
-                     encrypted_signed_pair.r.g_v,
-                     encrypted_signed_pair.r.m_g_v_b,
-                     encrypted_signed_pair.s.g_v,
-                     encrypted_signed_pair.s.m_g_v_b))
-
-        return encrypted_signed_pair
+        return result

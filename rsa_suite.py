@@ -365,9 +365,11 @@ class RSA:
                       % (msg, base))
             return None
 
-        # Divide message in chunks if necessary. When encrypting a string, the relevant metric is whether the size in
-        # characters exceeds the recipient's block size. When encrypting a number, the relevant metric is whether it
-        # is greater than n or not This is, imo, inconsistent, but seems to be what's expected in the subject.
+        # Divide message in chunks if necessary.
+        # When encrypting a string, the relevant metric is whether the size in
+        # characters exceeds the recipient's block size.
+        # When encrypting a number, the relevant metric is whether it is
+        # greater than n or not
         block_size = encodingtools.compute_block_size(n, base)
         if type(msg) is str:
             must_split = len(msg) > block_size
