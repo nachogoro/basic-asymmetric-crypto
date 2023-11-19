@@ -300,19 +300,19 @@ def sign(msg, sender, receiver, p, generator, h=None, base=27, hash_fn=None):
                                                    base=base,
                                                    cache=cached_conversions)
 
-        explain(f'First, compute r = g^h (mod p) ---> r = {generator}^{h} (mod {p})')
+        explain(f'First, compute r = g^h (mod p) ---> r = {generator}^{h_for_block} (mod {p})')
 
-        r = mathtools.quick_exp(generator, h, p)
+        r = mathtools.quick_exp(generator, h_for_block, p)
 
         explain(f'\nResolving the equation for m = {chunk} ---> '
-                f'{chunk_number} = {sender.get_private_key()}*{r} + {h}*s (mod {p-1})')
+                f'{chunk_number} = {sender.get_private_key()}*{r} + {h_for_block}*s (mod {p-1})')
 
-        explain(f'\nFor this we need the inverse of {h} in {p-1}')
+        explain(f'\nFor this we need the inverse of {h_for_block} in {p-1}')
 
         chunk_signature = (
             ((chunk_number
                 - (sender.get_private_key() * r))
-                * mathtools.get_inverse(h, p-1))
+                * mathtools.get_inverse(h_for_block, p-1))
             % (p-1))
 
         explain(f's = (m - (a*r)) * h^(-1) (mod p-1) ---> s = {chunk_signature}')

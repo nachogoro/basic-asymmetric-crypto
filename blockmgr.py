@@ -195,7 +195,7 @@ def assemble_cryptogram(blocks, n, base, cache=None):
         explain('Finally, we concatenate all padded blocks to obtain our cryptogram')
         result = Encrypted_Pair(g_v=''.join([c.g_v for c in padded_blocks]),
                                 m_g_v_b=''.join([c.m_g_v_b for c in padded_blocks]))
-        explain(f'Since our padded crypto blocks are {padded_blocks}, our cryptogram is '
+        explain(f'Since our padded crypto blocks are [{",".join(str(b) for b in padded_blocks)}], our cryptogram is '
                 f'{result}')
         return result
 
@@ -286,15 +286,16 @@ def assemble_signature(blocks, n, base):
         padded_block_size = get_block_size(n, base) + 1
         explain(f'We pad all blocks adding \'A\' to the left up to {padded_block_size} characters')
 
+        padded_blocks = []
         for block in blocks:
-            padded_block = Signed_Pair(pad(block.r, padded_block_size, explain=False),
-                                       pad(block.s, padded_block_size, explain=False))
+            padded_block = Signed_Pair(r=pad(block.r, padded_block_size, explain=False),
+                                       s=pad(block.s, padded_block_size, explain=False))
             explain(f'{block} gets padded to {padded_block}')
             padded_blocks.append(padded_block)
 
         explain('Finally, we concatenate all padded blocks to obtain our signature')
         result = Signed_Pair(r=''.join([c.r for c in padded_blocks]),
                              s=''.join([c.s for c in padded_blocks]))
-        explain(f'Since our padded blocks are {padded_blocks}, our signature is '
+        explain(f'Since our padded blocks are [{",".join(str(b) for b in padded_blocks)}], our signature is '
                 f'{result}')
         return result
