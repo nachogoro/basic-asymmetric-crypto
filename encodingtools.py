@@ -1,5 +1,6 @@
 # Author: NachoGoro
 
+from io_explain import explain, explaining_method
 import math
 
 def letter_to_number(letter, base):
@@ -66,33 +67,33 @@ def validate_message(msg, base):
     return True
 
 
-def get_as_number(msg, base, cache=None, debug=False):
+@explaining_method
+def get_as_number(msg, base, cache=None):
     """
     Given an alphabetic string, it will encode it in the specified base as a
     number.
 
-    If debug is set to True, it will print the steps followed to reach the result.
-
     Only bases 26 and 27 supported at the moment.
     """
+    if type(msg) is int:
+        return msg
+
     if cache and msg in cache:
         return cache[msg]
 
     as_numbers = [letter_to_number(c, base) for c in msg]
     result = 0
 
-    debug_rep = list()
+    explain_rep = list()
 
     for i, n in enumerate(as_numbers):
         result += n * base**(len(as_numbers) - 1 - i)
 
-        if debug:
-            debug_rep.append('%s*%d^%d' % (n, base, len(as_numbers) - 1 - i))
+        explain_rep.append('%s*%d^%d' % (n, base, len(as_numbers) - 1 - i))
 
-    if debug:
-        print(
-            '%s can be expressed (in base %d) as: %s = %d'
-            % (msg, base, ' + '.join(debug_rep), result))
+    explain(
+        '%s can be expressed (in base %d) as: %s = %d'
+        % (msg, base, ' + '.join(explain_rep), result))
 
     if cache:
         cache[msg] = result
@@ -100,15 +101,17 @@ def get_as_number(msg, base, cache=None, debug=False):
     return result
 
 
-def get_as_string(number, base, cache=None, debug=False):
+@explaining_method
+def get_as_string(number, base, cache=None):
     """
     Given a number in the specified base, it will return its string
     representation.
 
-    If debug is set to True, it will print the steps followed to reach the result.
-
     Only bases 26 and 27 supported at the moment.
     """
+    if type(number) is str:
+        return number
+
     if cache:
         cached_result = next((key for key, val in cache.items() if val == number), None)
         if cached_result:
@@ -126,27 +129,26 @@ def get_as_string(number, base, cache=None, debug=False):
     else:
         result = ''.join(letters_in_reverse[::-1])
 
-    if debug:
-        debug_num_rep = list()
-        debug_letter_rep = list()
-        if len(letters_in_reverse) == 0:
-            print('%d = 0 --> A' % number)
-        else:
-            for i in range(0, len(letters_in_reverse)):
-                debug_num_rep.append(
-                    '%d*%d^%d'
-                    % (letter_to_number( letters_in_reverse[-(i+1)], base),
-                        base,
-                        len(letters_in_reverse) - 1 - i))
+    num_rep = list()
+    letter_rep = list()
+    if len(letters_in_reverse) == 0:
+        explain('%d = 0 --> A' % number)
+    else:
+        for i in range(0, len(letters_in_reverse)):
+            num_rep.append(
+                '%d*%d^%d'
+                % (letter_to_number( letters_in_reverse[-(i+1)], base),
+                    base,
+                    len(letters_in_reverse) - 1 - i))
 
-                debug_letter_rep.append(
-                    '%s*%d^%d' % (letters_in_reverse[-(i+1)],
-                                  base,
-                                  len(letters_in_reverse) - 1 - i))
+            letter_rep.append(
+                '%s*%d^%d' % (letters_in_reverse[-(i+1)],
+                                base,
+                                len(letters_in_reverse) - 1 - i))
 
-            print('%d can be expressed (in base %d) as: %d = %s --> %s --> %s'
-                  % (number, base, number, ' + '.join(debug_num_rep),
-                     ' + '.join(debug_letter_rep), result))
+        explain('%d can be expressed (in base %d) as: %d = %s --> %s --> %s'
+                % (number, base, number, ' + '.join(num_rep),
+                   ' + '.join(letter_rep), result))
 
     if cache:
         cache[result] = number
