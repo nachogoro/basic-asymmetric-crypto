@@ -3,11 +3,24 @@ import contextvars
 # Create a context variable for explain mode
 explain_mode = contextvars.ContextVar('explain_mode', default=False)
 
+
 def explaining_method(func):
     """
-    Wrapper to enable/disable explanations in a function based on the explain
-    parameter passed to the function
+    Decorator that controls the explanation mode of a function.
+
+    Any function wrapped by this decorator is able to receive an extra
+    'explain' keyword argument. That parameter enables or disables the
+    function's explanation output. The decorator ensures that the explanation
+    mode is consistent within the current execution context (inherited between
+    calls) and resets it to its previous state after the function call.
+
+    Parameters:
+    func (Callable): The function to be wrapped by the decorator.
+
+    Returns:
+    Callable: The wrapped function with explanation mode control.
     """
+
     def wrapper(*args, **kwargs):
         # Extract the explain flag if present, otherwise default to False
         parent_explain_mode = explain_mode.get()
@@ -28,9 +41,16 @@ def explaining_method(func):
 
 def explain(*args, **kwargs):
     """
-    Prints an explanation if appropriate.
-    It's a no-op if explain_mode is set to False
+    Print an explanation if the current context is in explanation mode.
+
+    This function checks the current value of the 'explain_mode' context variable.
+    If explanation mode is enabled, it prints the given arguments; otherwise,
+    it does nothing.
+
+    Parameters:
+    *args: Variable length argument list to be printed if explanation mode is enabled.
+    **kwargs: Arbitrary keyword arguments to be passed to the print function.
     """
+
     if explain_mode.get():
         print(*args, **kwargs)
-

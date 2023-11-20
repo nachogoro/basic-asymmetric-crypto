@@ -3,11 +3,11 @@ Example file to encrypt a message in the Spanish alphabet using ElGamal
 """
 from cryptouned import elgamal
 
-alicia = elgamal.ElGamal_Agent(
+alicia = elgamal.Agent(
     name='Alicia',
     private_key=28236)
 
-bob = elgamal.ElGamal_Agent(
+bob = elgamal.Agent(
     name='Bob',
     private_key=21702)
 

@@ -8,11 +8,11 @@ the hash_fn parameter to sign
 from cryptouned import elgamal
 from cryptouned.hashing import sum_hash
 
-alberto = elgamal.ElGamal_Agent(
+alberto = elgamal.Agent(
     name='Alberto',
     private_key=28236)
 
-bono = elgamal.ElGamal_Agent(
+bono = elgamal.Agent(
     name='Bono',
     private_key=21702)
 

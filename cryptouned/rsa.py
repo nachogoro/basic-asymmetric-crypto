@@ -1,4 +1,5 @@
 # Author: NachoGoro
+from typing import Callable
 
 from cryptouned.utils import modmath, encoding
 from cryptouned.utils.blockmgr import (split_message_in_blocks, split_cryptogram_in_blocks,
@@ -6,27 +7,32 @@ from cryptouned.utils.blockmgr import (split_message_in_blocks, split_cryptogram
 from cryptouned.utils.io_explain import explain, explaining_method
 
 
-class RSA_Agent:
+class Agent:
     """
     Class representing one side in an RSA communication.
     """
 
-    def __init__(self, name, p=None, q=None, n=None, phi_n=None,
-                 e=None, d=None):
+    def __init__(self,
+                 name: str,
+                 p: int | None = None,
+                 q: int | None = None,
+                 n: int | None = None,
+                 phi_n: int | None = None,
+                 e: int | None = None,
+                 d: int | None = None):
         """
-        Constructor.
+        Initialize an Agent for RSA communication.
 
-        Not all parameters are necessary, some can be inferred from others. The
-        class is flexible enough to adapt to the ones provided.
-
-        name: name of the agent (for ease of identification in explanations)
-        p: one of the two prime factors of n, along with q
-        q: one of the two prime factors of n, along with p
-        n: large number, product of p and q
-        phi_n: result of applying the function phi of Euler to n ((p-1)*(q-1))
-        e: public key of the agent
-        d: private key of the agent
+        Parameters:
+        name (str): Name of the agent for identification.
+        p (int | None): One of the two prime factors of n, along with q.
+        q (int | None): One of the two prime factors of n, along with p.
+        n (int | None): Large number, product of p and q.
+        phi_n (int | None): Result of Euler's totient function applied to n ((p-1)*(q-1)).
+        e (int | None): Public key of the agent.
+        d (int | None): Private key of the agent.
         """
+
         self.name = name
         self.p = p
         self.q = q
@@ -42,7 +48,7 @@ class RSA_Agent:
         if p and q and phi_n and (phi_n != (p - 1) * (q - 1)):
             raise Exception(
                 'Inconsistent values phi_n, p and q ({} != ({}-1)*({}-1))'
-                    .format(phi_n, p, q))
+                .format(phi_n, p, q))
 
         tmp_phi_n = None
 
@@ -96,17 +102,20 @@ class RSA_Agent:
 
 
 @explaining_method
-def encrypt(msg, sender, receiver, base=27):
+def encrypt(msg: str, sender: Agent, receiver: Agent, base: int = 27) -> str | None:
     """
-    Encrypts a message using RSA.
+    Encrypt a message using RSA.
 
-    msg: message to be encrypted.
-    sender: RSA_Agent which will send the message. In RSA, it's irrevelant
-            when it comes to encrypting.
-    receiver: RSA_Agent which will receive the message being encrypted.
-    base: number of symbols to be used in the alphabet. Currently supported
-            26 (English) and 27 (Spanish)
+    Parameters:
+    msg (str): The message to be encrypted.
+    sender (Agent): The agent sending the message. Irrelevant for encryption.
+    receiver (Agent): The agent receiving the message.
+    base (int): The base of the alphabet used for encoding (26 for English, 27 for Spanish).
+
+    Returns:
+    str | None: The encrypted message if successful, or None if encryption fails.
     """
+
     cached_conversions = dict()
 
     # In order to encrypt a message we just need the public key and n of the
@@ -119,7 +128,7 @@ def encrypt(msg, sender, receiver, base=27):
         msg=msg,
         key=receiver.get_public_key(),
         n=receiver.get_n(),
-        decrypt=False,
+        decryption=False,
         base=base,
         cache=cached_conversions)
 
@@ -134,17 +143,20 @@ def encrypt(msg, sender, receiver, base=27):
 
 
 @explaining_method
-def decrypt(msg, sender, receiver, base=27):
+def decrypt(msg: str, sender: Agent, receiver: Agent, base: int = 27) -> str | None:
     """
-    Decrypts a message using RSA.
+    Decrypt a message using RSA.
 
-    msg: message to be decrypted.
-    sender: RSA_Agent which sent the message. In RSA, it's irrevelant
-            when it comes to decrypting.
-    receiver: RSA_Agent which received the encrypted message.
-    base: number of symbols to be used in the alphabet. Currently supported
-            26 (English) and 27 (Spanish)
+    Parameters:
+    msg (EncryptedPair): The encrypted message to be decrypted.
+    sender (Agent): The agent who sent the message. Irrelevant for decryption.
+    receiver (Agent): The agent who will decrypt the message.
+    base (int): The base of the alphabet used for encoding (26 for English, 27 for Spanish).
+
+    Returns:
+    str | None: The decrypted message if successful, or None if decryption fails.
     """
+
     cached_conversions = dict()
     # In order to decrypt a message we just need the private key and n of
     # the receiver
@@ -153,8 +165,8 @@ def decrypt(msg, sender, receiver, base=27):
         return None
 
     decrypted_numbers = _transform(msg=msg, key=receiver.get_private_key(),
-                                      n=receiver.get_n(), cache=cached_conversions,
-                                      base=base, decrypt=True)
+                                   n=receiver.get_n(), cache=cached_conversions,
+                                   base=base, decryption=True)
 
     explain('In order to get the clear message, we represent the blocks as strings')
     decrypted_blocks = [encoding.get_as_string(block, base)
@@ -165,24 +177,29 @@ def decrypt(msg, sender, receiver, base=27):
                             base,
                             cache=cached_conversions)
 
+
 @explaining_method
-def sign(msg, sender, receiver, base=27, hash_fn=None):
+def sign(msg: str,
+         sender: Agent,
+         receiver: Agent,
+         base: int = 27,
+         hash_fn: Callable[[str, int], int] | None = None) -> str | None:
     """
-    Signs a message to be sent to an agent using RSA.
+    Sign a message using RSA.
 
-    The message will be signed by the sender and encrypted for the
-    receiver.
+    The message will be signed by the sender and encrypted for the receiver.
 
-    msg: message to be signed.
-    sender: RSA_Agent which will send the message.
-    receiver: RSA_Agent which will receive the signed message.
-    base: number of symbols to be used in the alphabet. Currently supported
-            26 (English) and 27 (Spanish)
-    hash_fn: optional parameter. A hash function to apply to the message
-             before signing it. It must be an explaining_method, and take
-             two parameters (message to hash as a string and base to use)
-             and return the hashed message as a number.
+    Parameters:
+    msg (str): The message to be signed.
+    sender (Agent): The agent signing the message.
+    receiver (Agent): The agent who will receive the signed message.
+    base (int): The base of the alphabet used for encoding (26 for English, 27 for Spanish).
+    hash_fn (Callable[[str, int], int] | None): Optional hash function to apply to the message before signing.
+
+    Returns:
+    SignedPair | None: The signed message if successful, or None if signing fails.
     """
+
     cached_conversions = dict()
     # In order to sign a message we need the public key and n of the
     # receiver and the private key and n of the sender
@@ -215,7 +232,7 @@ def sign(msg, sender, receiver, base=27, hash_fn=None):
             'encrypting the message with the sender\'s private key)')
 
     rubric_chunks = _transform(msg=msg_to_sign, key=sender.get_private_key(),
-                                   n=sender.get_n(), base=base, decrypt=False)
+                               n=sender.get_n(), base=base, decryption=False)
 
     explain(f'\nWe obtain the following chunks for the rubric: {rubric_chunks}')
 
@@ -244,24 +261,29 @@ def sign(msg, sender, receiver, base=27, hash_fn=None):
                               receiver.get_n(),
                               base)
 
+
 @explaining_method
-def _transform(msg, key, n, base, decrypt=False, cache=None):
+def _transform(msg: str | int,
+               key: int,
+               n: int,
+               base: int,
+               decryption: bool = False,
+               cache: dict = None) -> list[int]:
     """
-    Private method. Applies a given key to a message, which can be used for
-    encrypting, decrypting or signing.
+    Transform a message for encryption, decryption, or signing using RSA.
 
-    Returns the individual chunks of the message as integers, for the caller to
-    assemble as they see fit.
+    Parameters:
+    msg (str | int): The message to transform.
+    key (int): The key used for the transformation.
+    n (int): The modulo used for the RSA operations.
+    base (int): The base of the alphabet used for encoding (26 for English, 27 for Spanish).
+    decryption (bool): Specifies whether the transformation is for decryption.
+    cache (dict): Optional cache for previously computed values.
 
-    msg: message to be encrypted. It can be in string or numeric form.
-    key: key to be used for encryption.
-    n: modulo for the encryption operations.
-    base: number of symbols to be used in the alphabet. Currently supported
-            26 (English) and 27 (Spanish)
-    decrypt: whether the method is being used for decrypting a message
-    (necessary to determine the size of the chunks in which the message
-    needs to be split).
+    Returns:
+    list[int]: The transformed message blocks as integers.
     """
+
     if cache is None:
         cache = dict()
 
@@ -271,7 +293,7 @@ def _transform(msg, key, n, base, decrypt=False, cache=None):
         return None
 
     # Divide message in chunks if necessary.
-    if decrypt:
+    if decryption:
         chunks = split_cryptogram_in_blocks(msg, n, base)
     else:
         chunks = split_message_in_blocks(msg, n, base)
@@ -289,3 +311,4 @@ def _transform(msg, key, n, base, decrypt=False, cache=None):
         explain(f'\n{chunk_number} gets converted to {encrypted_numbers[-1]}\n')
 
     return encrypted_numbers
+

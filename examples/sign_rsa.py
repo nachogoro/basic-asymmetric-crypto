@@ -9,7 +9,7 @@ from cryptouned import rsa
 from cryptouned.hashing import sum_hash
 
 # Then define the sender
-alberto = rsa.RSA_Agent(
+alberto = rsa.Agent(
     name='Alberto',
     n=34121,
     e=15775,
@@ -18,7 +18,7 @@ alberto = rsa.RSA_Agent(
     q=149)
 
 # ... and the receiver
-barbara = rsa.RSA_Agent(
+barbara = rsa.Agent(
     name='Barbara',
     n=46927,
     e=39423)

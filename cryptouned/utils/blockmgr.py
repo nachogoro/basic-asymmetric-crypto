@@ -1,29 +1,83 @@
 from cryptouned.utils.io_explain import explain, explaining_method
-from cryptouned.utils.elgamal_types import Encrypted_Pair, Signed_Pair
+from cryptouned.utils.elgamal_types import EncryptedPair, SignedPair
 from cryptouned.utils import encoding
 from math import floor, log
 
 
 @explaining_method
-def get_block_size(n, base):
+def get_block_size(n: int, base: int) -> int:
+    """
+    Calculate the block size for a given modulo and base.
+
+    Determines the maximum size of blocks that can be used for cryptographic
+    operations based on the provided modulo `n` and the base of the encoding.
+
+    Parameters:
+    n: The modulo used in the cryptographic operation.
+    base: The base of the encoding.
+
+    Returns:
+    The calculated block size.
+    """
+
     result = floor(log(n, base))
     explain(f'Block size for {n} in base {base} is floor(log{base}({n})) = {result}')
     return result
 
 
 @explaining_method
-def pad(msg, length):
+def pad(msg: str, length: int) -> str:
+    """
+    Pad a message to a specified length by adding 'A's to the left.
+
+    If the message is shorter than the desired length, 'A's are added to the
+    left of the message until it reaches the specified length.
+
+    Parameters:
+    msg: The message to be padded.
+    length: The desired length of the padded message.
+
+    Returns:
+    The padded message.
+    """
+
     result = msg.rjust(length, 'A')
     explain(f'{msg} padded to {length} characters is {result}')
     return result
 
 
-def split_in_blocks_of_size(msg: str, block_size: int):
+def split_in_blocks_of_size(msg: str, block_size: int) -> list[str]:
+    """
+    Split a message into blocks of a specified size.
+
+    Parameters:
+    msg (str): The message to be split.
+    block_size (int): The size of each block.
+
+    Returns:
+    A list of message blocks, each of the specified size.
+    """
     return [msg[i:i + block_size] for i in range(0, len(msg), block_size)]
 
 
 @explaining_method
-def split_message_in_blocks(msg, n, base):
+def split_message_in_blocks(msg: str | int, n: int, base: int) -> list[str | int]:
+    """
+    Split a message or number into blocks suitable for encryption or decryption.
+
+    For strings, it splits the message into blocks based on the block size determined
+    by `n` and `base`. For integers, it first converts the number into a string
+    representation and then splits it into blocks.
+
+    Parameters:
+    msg: The message or number to be split.
+    n: The modulo used in the cryptographic operation.
+    base: The base of the encoding.
+
+    Returns:
+    A list of blocks obtained from the message or number.
+    """
+
     if type(msg) is str:
         block_size = get_block_size(n, base)
         explain(f'To transform a string using modulo {n}, we must split it '
@@ -61,7 +115,25 @@ def split_message_in_blocks(msg, n, base):
 
 
 @explaining_method
-def split_cryptogram_in_blocks(msg, n, base):
+def split_cryptogram_in_blocks(msg: str | EncryptedPair | int, n: int, base: int) -> list[str | EncryptedPair | int]:
+    """
+    Split a cryptogram into blocks for decryption.
+
+    Depending on the type of `msg`, it splits the cryptogram into blocks of
+    appropriate size for decryption. For strings, it uses knowledge of the
+    padding scheme. For EncryptedPair objects, it also takes into account
+    the block size and padding. For integers, it assumes the integer is the
+    numeric representation of a string.
+
+    Parameters:
+    msg (str | EncryptedPair | int): The cryptogram to be split into blocks.
+    n (int): The modulo used in the cryptographic operation.
+    base (int): The base of the encoding.
+
+    Returns:
+    list[str | EncryptedPair | int]: A list of blocks obtained from the cryptogram.
+    """
+
     if type(msg) is str:
         explain(f'To split a cryptogram which was encrypted using modulo {n}, '
                 f'we use the knowledge that the sender padded each block to '
@@ -81,7 +153,7 @@ def split_cryptogram_in_blocks(msg, n, base):
         explain(f'{msg} is split into {blocks}')
         return blocks
 
-    if type(msg) is Encrypted_Pair:
+    if type(msg) is EncryptedPair:
         explain(f'To split a cryptogram which was encrypted using modulo {n}, '
                 f'we use the knowledge that the sender padded each block to '
                 f'one letter more than the block size of {n}')
@@ -95,7 +167,7 @@ def split_cryptogram_in_blocks(msg, n, base):
             explain(f'Padding in incorrect in the cryptogram: both parts of '
                     'the message should be of equal length if any of them is '
                     'larger than the maximum length of a single block size')
-            return None
+            raise ValueError("Invalid lengths in ElGamal cryptogram")
 
         if len(msg_pair.g_v) <= padded_block_size:
             explain(f'Since both parts of the cryptogram are shorter than '
@@ -108,7 +180,7 @@ def split_cryptogram_in_blocks(msg, n, base):
         g_v_blocks = split_in_blocks_of_size(msg_pair.g_v, padded_block_size)
         m_g_v_b_blocks = split_in_blocks_of_size(msg_pair.m_g_v_b, padded_block_size)
 
-        blocks = [Encrypted_Pair(g_v_blocks[i], m_g_v_b_blocks[i])
+        blocks = [EncryptedPair(g_v_blocks[i], m_g_v_b_blocks[i])
                   for i in range(len(g_v_blocks))]
 
         explain(f'({msg_pair.g_v}, {msg_pair.m_g_v_b}) is split into '
@@ -144,10 +216,24 @@ def split_cryptogram_in_blocks(msg, n, base):
 
 
 @explaining_method
-def assemble_cryptogram(blocks, n, base, cache=None):
+def assemble_cryptogram(blocks: list[str | EncryptedPair | int], n: int, base: int, cache: dict = None) -> str | EncryptedPair | int:
     """
-    Assembles a series of cipher blocks into a single cryptogram
+    Assemble a series of cipher blocks into a single cryptogram.
+
+    This method combines several blocks of encrypted data into a single
+    cryptogram. It handles different types of blocks, including strings,
+    EncryptedPair objects, and integers, considering the block size and padding.
+
+    Parameters:
+    blocks (list[str | EncryptedPair | int]): The list of encrypted blocks to be assembled.
+    n (int): The modulo used in the cryptographic operation.
+    base (int): The base of the encoding.
+    cache (dict): A cache for previously computed string-to-number conversions.
+
+    Returns:
+    str | EncryptedPair | int: The assembled cryptogram.
     """
+
     if cache is None:
         cache = dict()
 
@@ -175,7 +261,7 @@ def assemble_cryptogram(blocks, n, base, cache=None):
         explain(f'Since our padded crypto blocks are {result}, our cryptogram is {assembled}')
         return assembled
 
-    if type(blocks[0]) is Encrypted_Pair:
+    if type(blocks[0]) is EncryptedPair:
         # We must assemble a list of ElGamal encrypted blocks
         if len(blocks) == 1:
             explain('Since we only have a single block, there is no need to assemble or pad')
@@ -195,14 +281,14 @@ def assemble_cryptogram(blocks, n, base, cache=None):
 
         padded_blocks = []
         for block in blocks:
-            padded_block = Encrypted_Pair(pad(block.g_v, padded_block_size, explain=False),
-                                          pad(block.m_g_v_b, padded_block_size, explain=False))
+            padded_block = EncryptedPair(pad(block.g_v, padded_block_size, explain=False),
+                                         pad(block.m_g_v_b, padded_block_size, explain=False))
             explain(f'{block} gets padded to {padded_block}')
             padded_blocks.append(padded_block)
 
         explain('Finally, we concatenate all padded blocks to obtain our cryptogram')
-        result = Encrypted_Pair(g_v=''.join([c.g_v for c in padded_blocks]),
-                                m_g_v_b=''.join([c.m_g_v_b for c in padded_blocks]))
+        result = EncryptedPair(g_v=''.join([c.g_v for c in padded_blocks]),
+                               m_g_v_b=''.join([c.m_g_v_b for c in padded_blocks]))
         explain(
             f'Since our padded crypto blocks are [{",".join(str(b) for b in padded_blocks)}], our cryptogram is '
             f'{result}')
@@ -228,9 +314,22 @@ def assemble_cryptogram(blocks, n, base, cache=None):
 
 
 @explaining_method
-def assemble_message(blocks, n, base, cache=None):
+def assemble_message(blocks: list[str | int], n: int, base: int, cache: dict = None) -> str | int:
     """
-    Assembles a series of clear text messages into a single message
+    Assemble a series of clear text blocks into a single message.
+
+    Combines multiple blocks of decrypted data into a single clear text message.
+    It handles different types of blocks, including strings and integers,
+    considering the block size and padding requirements.
+
+    Parameters:
+    blocks (list[str | int]): The list of decrypted blocks to be assembled.
+    n (int): The modulo used in the cryptographic operation.
+    base (int): The base of the encoding.
+    cache (dict): A cache for previously computed values.
+
+    Returns:
+    str | int: The assembled clear text message.
     """
     if cache is None:
         cache = dict()
@@ -277,7 +376,23 @@ def assemble_message(blocks, n, base, cache=None):
 
 
 @explaining_method
-def assemble_signature(blocks, n, base):
+def assemble_signature(blocks: list[str | SignedPair], n: int, base: int) -> str | SignedPair:
+    """
+    Assemble a series of blocks into a single digital signature.
+
+    This method combines several blocks of a digital signature into a single
+    signature string. It handles different types of blocks, including strings
+    and SignedPair objects, considering the block size and padding requirements.
+
+    Parameters:
+    blocks (list[str | SignedPair]): The list of signature blocks to be assembled.
+    n (int): The modulo used in the cryptographic operation.
+    base (int): The base of the encoding.
+
+    Returns:
+    str | SignedPair: The assembled digital signature.
+    """
+
     if type(blocks[0]) is str:
         # We must assemble a list of string blocks, for encryption
         if len(blocks) == 1:
@@ -302,12 +417,12 @@ def assemble_signature(blocks, n, base):
         explain(f'Since our padded blocks are {result}, our signature is {assembled}')
         return assembled
 
-    elif type(blocks[0]) is Signed_Pair:
+    elif type(blocks[0]) is SignedPair:
         # We must assemble a list of ElGamal signed blocks
         if len(blocks) == 1:
             explain('Since we only have a single block, there is no need to assemble or pad')
             explain(f'The signature simply is {blocks[0]}')
-            return blocks
+            return blocks[0]
 
         explain('Since we had to split the message into blocks, we need to '
                 'assemble them to form the signature')
@@ -322,14 +437,14 @@ def assemble_signature(blocks, n, base):
 
         padded_blocks = []
         for block in blocks:
-            padded_block = Signed_Pair(r=pad(block.r, padded_block_size, explain=False),
-                                       s=pad(block.s, padded_block_size, explain=False))
+            padded_block = SignedPair(r=pad(block.r, padded_block_size, explain=False),
+                                      s=pad(block.s, padded_block_size, explain=False))
             explain(f'{block} gets padded to {padded_block}')
             padded_blocks.append(padded_block)
 
         explain('Finally, we concatenate all padded blocks to obtain our signature')
-        result = Signed_Pair(r=''.join([c.r for c in padded_blocks]),
-                             s=''.join([c.s for c in padded_blocks]))
+        result = SignedPair(r=''.join([c.r for c in padded_blocks]),
+                            s=''.join([c.s for c in padded_blocks]))
         explain(
             f'Since our padded blocks are [{",".join(str(b) for b in padded_blocks)}], our signature is '
             f'{result}')

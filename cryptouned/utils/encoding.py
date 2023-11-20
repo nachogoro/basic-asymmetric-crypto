@@ -1,22 +1,33 @@
 # Author: NachoGoro
 
 from cryptouned.utils.io_explain import explain, explaining_method
-import math
 
-def letter_to_number(letter, base):
-    """
-    Given a letter in the alphabet, it will return its value in the specified
-    base (A: 0, B: 1, ...)
 
-    Only bases 26 and 27 supported at the moment.
+def letter_to_number(letter: str, base: int) -> int:
     """
+    Convert a letter to its corresponding numerical value in a specified base.
+
+    The conversion is based on the position in the alphabet (e.g., A: 0, B: 1, ...).
+    Supports base 26 (English alphabet) and base 27 (Spanish alphabet without accents).
+
+    Parameters:
+    letter (str): The letter to be converted.
+    base (int): The base of the alphabet (26 or 27).
+
+    Returns:
+    int: The numerical value of the letter in the specified base.
+
+    Raises:
+    ValueError: If the letter is not part of the alphabet.
+    """
+
     upper_case = letter.upper()
 
     if (len(upper_case) != 1
-        or (not upper_case.isalpha()
-            and not (base == 27 and upper_case == 'Ñ'))):
+            or (not upper_case.isalpha()
+                and not (base == 27 and upper_case == 'Ñ'))):
         # Not a letter
-        return None
+        raise ValueError(f"{letter} is not part of the base-{base} alphabet")
 
     # It's a letter
     if upper_case == 'Ñ':
@@ -29,16 +40,27 @@ def letter_to_number(letter, base):
         return result
 
 
-def number_to_letter(number, base):
+def number_to_letter(number: int, base: int) -> str:
     """
-    Given a number, it will return its corresponding letter in the given base.
-    base (0: A, 1: B, ...)
+    Convert a number to its corresponding letter in a given base.
 
-    Only bases 26 and 27 supported at the moment.
+    The conversion follows the alphabetical order (0: A, 1: B, ...).
+    Supports base 26 (English alphabet) and base 27 (Spanish alphabet without accents).
+
+    Parameters:
+    number (int): The number to be converted.
+    base (int): The base of the alphabet (26 or 27).
+
+    Returns:
+    str: The letter corresponding to the given number in the specified base.
+
+    Raises:
+    ValueError: If the number is not in the range [0, base).
     """
+
     if not 0 <= number < base:
         # Not in valid range
-        return None
+        raise ValueError(f"{number} is not in [0, {base}) range")
 
     index = ord('A') + number
 
@@ -51,13 +73,22 @@ def number_to_letter(number, base):
     return chr(index)
 
 
-def validate_message(msg, base):
+def validate_message(msg: str, base: int) -> bool:
     """
-    Validates that a message only contains alphabetic characters in the
-    specified base.
+    Check if a message contains only valid alphabetic characters for a specified base.
 
-    Only bases 26 and 27 supported at the moment.
+    Validates that the message is composed of letters that are valid in the
+    given base. Currently supports base 26 (English alphabet) and base 27
+    (Spanish alphabet including 'Ñ').
+
+    Parameters:
+    msg (str): The message to be validated.
+    base (int): The base of the alphabet (26 or 27).
+
+    Returns:
+    bool: True if the message is valid for the specified base, False otherwise.
     """
+
     if base == 26:
         return msg.isalpha()
 
@@ -68,13 +99,24 @@ def validate_message(msg, base):
 
 
 @explaining_method
-def get_as_number(msg, base, cache=None):
+def get_as_number(msg: str | int, base: int, cache: dict = None) -> int:
     """
-    Given an alphabetic string, it will encode it in the specified base as a
-    number.
+    Encode an alphabetic string into a number using the specified base.
 
-    Only bases 26 and 27 supported at the moment.
+    Converts each letter of the string to its numerical value and encodes the
+    entire string as a single number in the given base. Supports base 26
+    (English) and base 27 (Spanish including 'Ñ'). Can optionally use a cache
+    to store and retrieve previously computed values.
+
+    Parameters:
+    msg (str | int): The message to be encoded or an integer to be returned as is.
+    base (int): The base of the alphabet (26 or 27).
+    cache (dict, optional): A cache dictionary to store/retrieve previously computed values.
+
+    Returns:
+    int: The numerical representation of the string in the specified base.
     """
+
     if type(msg) is int:
         return msg
 
@@ -87,7 +129,7 @@ def get_as_number(msg, base, cache=None):
     explain_rep = list()
 
     for i, n in enumerate(as_numbers):
-        result += n * base**(len(as_numbers) - 1 - i)
+        result += n * base ** (len(as_numbers) - 1 - i)
 
         explain_rep.append('%s*%d^%d' % (n, base, len(as_numbers) - 1 - i))
 
@@ -102,22 +144,33 @@ def get_as_number(msg, base, cache=None):
 
 
 @explaining_method
-def get_as_string(number, base, cache=None):
+def get_as_string(msg: int | str, base: int, cache: dict = None) -> str:
     """
-    Given a number in the specified base, it will return its string
-    representation.
+    Decode a number into its string representation using the specified base.
 
-    Only bases 26 and 27 supported at the moment.
+    Converts a number into a string where each digit of the number is
+    represented by a letter in the given base. Supports base 26 (English) and
+    base 27 (Spanish including 'Ñ'). Can optionally use a cache to store and
+    retrieve previously computed values.
+
+    Parameters:
+    msg (int | str): The number to be decoded or a string to be returned as is.
+    base (int): The base of the alphabet (26 or 27).
+    cache (dict, optional): A cache dictionary to store/retrieve previously computed values.
+
+    Returns:
+    str: The alphabetic representation of the number in the specified base.
     """
-    if type(number) is str:
-        return number
+
+    if type(msg) is str:
+        return msg
 
     if cache:
-        cached_result = next((key for key, val in cache.items() if val == number), None)
+        cached_result = next((key for key, val in cache.items() if val == msg), None)
         if cached_result:
             return cached_result
 
-    n = number
+    n = msg
     letters_in_reverse = list()
     while n > 0:
         value = n % base
@@ -132,24 +185,24 @@ def get_as_string(number, base, cache=None):
     num_rep = list()
     letter_rep = list()
     if len(letters_in_reverse) == 0:
-        explain('%d = 0 --> A' % number)
+        explain('%d = 0 --> A' % msg)
     else:
         for i in range(0, len(letters_in_reverse)):
             num_rep.append(
                 '%d*%d^%d'
-                % (letter_to_number( letters_in_reverse[-(i+1)], base),
-                    base,
-                    len(letters_in_reverse) - 1 - i))
+                % (letter_to_number(letters_in_reverse[-(i + 1)], base),
+                   base,
+                   len(letters_in_reverse) - 1 - i))
 
             letter_rep.append(
-                '%s*%d^%d' % (letters_in_reverse[-(i+1)],
-                                base,
-                                len(letters_in_reverse) - 1 - i))
+                '%s*%d^%d' % (letters_in_reverse[-(i + 1)],
+                              base,
+                              len(letters_in_reverse) - 1 - i))
 
         explain('%d can be expressed (in base %d) as: %d = %s --> %s --> %s'
-                % (number, base, number, ' + '.join(num_rep),
+                % (msg, base, msg, ' + '.join(num_rep),
                    ' + '.join(letter_rep), result))
 
     if cache:
-        cache[result] = number
+        cache[result] = msg
     return result

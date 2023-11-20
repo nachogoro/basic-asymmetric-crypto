@@ -64,7 +64,7 @@ The principal aim of this project is to be useful to students of the subject.
 Hence, it attempts to be as flexible as possible when it comes to solving
 exercises with the data given in the exercises. It tries to infer information
 reasonably if given, and ignores redudnant pieces of data. For example, there
-is no need to specify `n` for an `RSA_Agent` if `p` and `q` are provided. Also,
+is no need to specify `n` for an `Agent` if `p` and `q` are provided. Also,
 although for clarity all methods require a sender and a receiver, since some
 operations only require one of them (no need to know who is encrypting a
 message if it is not signed, for example), one can specify those parameters as
