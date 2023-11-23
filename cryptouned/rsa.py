@@ -143,12 +143,12 @@ def encrypt(msg: str, sender: Agent, receiver: Agent, base: int = 27) -> str | N
 
 
 @explaining_method
-def decrypt(msg: str, sender: Agent, receiver: Agent, base: int = 27) -> str | None:
+def decrypt(cryptogram: str, sender: Agent, receiver: Agent, base: int = 27) -> str | None:
     """
     Decrypt a message using RSA.
 
     Parameters:
-    msg (EncryptedPair): The encrypted message to be decrypted.
+    cryptogram (str): The encrypted message to be decrypted.
     sender (Agent): The agent who sent the message. Irrelevant for decryption.
     receiver (Agent): The agent who will decrypt the message.
     base (int): The base of the alphabet used for encoding (26 for English, 27 for Spanish).
@@ -164,7 +164,7 @@ def decrypt(msg: str, sender: Agent, receiver: Agent, base: int = 27) -> str | N
         explain('Private key or n of %s is unknown' % str(receiver.name))
         return None
 
-    decrypted_numbers = _transform(msg=msg, key=receiver.get_private_key(),
+    decrypted_numbers = _transform(msg=cryptogram, key=receiver.get_private_key(),
                                    n=receiver.get_n(), cache=cached_conversions,
                                    base=base, decryption=True)
 
@@ -290,7 +290,7 @@ def _transform(msg: str | int,
     if type(msg) is str and not encoding.validate_message(msg, base):
         explain('%s cannot be encoded in base %s (only A-Z)'
                 % (msg, base))
-        return None
+        raise ValueError(f"Invalid message {msg}")
 
     # Divide message in chunks if necessary.
     if decryption:

@@ -158,7 +158,7 @@ def encrypt(msg: str,
 
 
 @explaining_method
-def decrypt(msg_pair: EncryptedPair,
+def decrypt(cryptogram_pair: EncryptedPair,
             sender: Agent | None,
             receiver: Agent,
             p: int,
@@ -168,7 +168,7 @@ def decrypt(msg_pair: EncryptedPair,
     Decrypt an ElGamal encrypted message.
 
     Parameters:
-    msg_pair (EncryptedPair): The encrypted message pair to be decrypted.
+    cryptogram_pair (EncryptedPair): The encrypted message pair to be decrypted.
     sender (Agent | None): The agent who sent the message. Irrelevant for decryption.
     receiver (Agent): The agent who will decrypt the message.
     p (int): The prime number used in the encryption.
@@ -187,16 +187,16 @@ def decrypt(msg_pair: EncryptedPair,
         explain('Private key of %s is unknown' % str(receiver.name))
         return None
 
-    msg_pair = EncryptedPair(g_v=msg_pair.g_v.upper(),
-                             m_g_v_b=msg_pair.m_g_v_b.upper())
+    cryptogram_pair = EncryptedPair(g_v=cryptogram_pair.g_v.upper(),
+                                    m_g_v_b=cryptogram_pair.m_g_v_b.upper())
 
-    if not (encoding.validate_message(msg_pair.g_v, base)
-            and encoding.validate_message(msg_pair.m_g_v_b, base)):
+    if not (encoding.validate_message(cryptogram_pair.g_v, base)
+            and encoding.validate_message(cryptogram_pair.m_g_v_b, base)):
         explain('(%s, %s) cannot be encoded in base %s (only A-Z)'
-                % (msg_pair.g_v, msg_pair.m_g_v_b, base))
+                % (cryptogram_pair.g_v, cryptogram_pair.m_g_v_b, base))
         return None
 
-    chunks = split_cryptogram_in_blocks(msg_pair, p, base)
+    chunks = split_cryptogram_in_blocks(cryptogram_pair, p, base)
 
     decrypted_chunks = list()
 

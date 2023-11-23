@@ -343,9 +343,9 @@ def assemble_message(blocks: list[str | int], n: int, base: int, cache: dict = N
 
         explain('Since we had to split the cryptogram into blocks, we need to '
                 'assemble the decrypted blocks to form the message')
-        explain('The sender split the message in blocks of a given length '
-                '(with the exception of the last block). That length is the '
-                'block size determined by {n}')
+        explain(f'The sender split the message in blocks of a given length '
+                f'(with the exception of the last block). That length is the '
+                f'block size determined by {n}')
         block_size = get_block_size(n, base)
         explain(f'We pad all blocks (but the last one) adding \'A\' to the left up to {block_size} '
                 'characters')
