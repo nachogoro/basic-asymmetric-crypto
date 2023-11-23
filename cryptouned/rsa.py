@@ -263,6 +263,146 @@ def sign(msg: str,
 
 
 @explaining_method
+def verify_signature(cryptogram: str,
+                     encrypted_signature: str,
+                     sender: Agent,
+                     receiver: Agent,
+                     base: int = 27,
+                     hash_fn: Callable[[str, int], int] | None = None) -> bool:
+    if sender.n > receiver.n:
+        explain("The signature cannot be verified due to the fact that we can't know which and how many "
+                "signature blocks correspond to which rubric blocks")
+        explain("This is because the rubric blocks get encrypted individually")
+        raise ValueError("Cannot verify encrypted signature if sender's n is greater than receiver's n")
+
+    explain("First, we obtain the rubric blocks by decrypting the encrypted signature")
+    rubric_blocks = _transform(msg=encrypted_signature,
+                               key=receiver.get_private_key(),
+                               n=receiver.n,
+                               base=base,
+                               decryption=True)
+
+    explain(f"So the rubric blocks are {rubric_blocks}")
+
+    explain("\nNow, we apply the sender's public key to each block of the rubric to obtain the "
+            "blocks of the signed message")
+
+    signed_msg_blocks = list()
+    for rubric_block in rubric_blocks:
+        signed_msg_blocks.append(*_transform(msg=rubric_block,
+                                             key=sender.get_public_key(),
+                                             n=sender.n,
+                                             base=base,
+                                             decryption=False))
+
+    explain(f"So the clear text blocks which were recovered from the signature are {signed_msg_blocks}")
+
+    explain("\nNow, we decrypt the cryptogram to obtain the message whose signature we want to verify")
+    msg = decrypt(cryptogram=cryptogram,
+                  sender=sender,
+                  receiver=receiver,
+                  base=base)
+
+    explain()
+
+    if hash_fn:
+        explain(f"Since there is a hash function, we apply it to the recovered message m={msg} first")
+        m = msg
+        msg = hash_fn(msg, base)
+        explain(f"The sender signed the hash hash({m})={msg}")
+    else:
+        explain(f"There is no hash function, so the sender signed the message m={msg} directly")
+
+    explain(f"\nNow, we need to split the message which was supposedly signed by the "
+            f"sender using their n={sender.get_n()}")
+
+    msg_blocks = split_message_in_blocks(msg=msg, n=sender.get_n(), base=base)
+    msg_blocks_number = [encoding.get_as_number(block, base) for block in msg_blocks]
+
+    if hash_fn:
+        explain(f"\nTherefore, the blocks retrieved from the cryptogram are {msg_blocks_number}")
+    else:
+        explain(f"\nTherefore, the blocks retrieved from the cryptogram are {msg_blocks}={msg_blocks_number}")
+
+    explain("\nWe have to check if the blocks retrieved from the cryptogram match those retrieved from the rubric.")
+    explain("If they match, the signature is correct; otherwise, the signature does not correspond to that message")
+
+    if msg_blocks_number == signed_msg_blocks:
+        explain(f"The blocks retrieved from the cryptogram ({msg_blocks_number}) match "
+                f"the blocks retrieved from the rubric ({signed_msg_blocks})")
+        explain("The signature is correct")
+        return True
+    else:
+        explain(f"The blocks retrieved from the cryptogram ({msg_blocks_number}) do not match "
+                f"the blocks retrieved from the rubric ({signed_msg_blocks})")
+        explain("The signature does not correspond to the cryptogram")
+        return False
+
+
+@explaining_method
+def verify_rubric(msg: str | int,
+                  rubric: str | int,
+                  sender: Agent,
+                  receiver: Agent,
+                  base: int = 27,
+                  hash_fn: Callable[[str, int], int] | None = None) -> bool:
+    explain(f"First, we obtain the rubric blocks by splitting it with the sender's n={sender.get_n()}")
+    rubric_blocks = split_cryptogram_in_blocks(msg=rubric,
+                                               n=sender.get_n(),
+                                               base=base)
+
+    explain(f"So the rubric blocks are {rubric_blocks}")
+
+    explain("\nNow, we apply the sender's public key to each block of the rubric to obtain the "
+            "blocks of the signed message")
+
+    signed_msg_blocks = list()
+    for rubric_block in rubric_blocks:
+        signed_msg_blocks.append(*_transform(msg=rubric_block,
+                                             key=sender.get_public_key(),
+                                             n=sender.get_n(),
+                                             base=base,
+                                             decryption=False))
+
+    explain(f"So the clear text blocks which were recovered from the rubric are {signed_msg_blocks}")
+
+    explain()
+
+    if hash_fn:
+        explain(f"Since there is a hash function, we apply it to the recovered message m={msg} first")
+        m = msg
+        msg = hash_fn(msg, base)
+        explain(f"The sender signed the hash hash({m})={msg}")
+    else:
+        explain(f"There is no hash function, so the sender signed the message m={msg} directly")
+
+    explain(f"\nNow, we need to split the message which was supposedly signed by the "
+            f"sender using their n={sender.get_n()}")
+
+    msg_blocks = split_message_in_blocks(msg=msg, n=sender.get_n(), base=base)
+    msg_blocks_number = [encoding.get_as_number(block, base) for block in msg_blocks]
+
+    if hash_fn:
+        explain(f"\nTherefore, the blocks retrieved from the cryptogram are {msg_blocks_number}")
+    else:
+        explain(f"\nTherefore, the blocks retrieved from the cryptogram are {msg_blocks}={msg_blocks_number}")
+
+    explain("\nWe have to check if the blocks retrieved from the cryptogram match those retrieved from the rubric.")
+    explain("If they match, the signature is correct; otherwise, the signature does not correspond to that message")
+
+    if msg_blocks_number == signed_msg_blocks:
+        explain(f"The blocks retrieved from the cryptogram ({msg_blocks_number}) match "
+                f"the blocks retrieved from the rubric ({signed_msg_blocks})")
+        explain("The signature is correct")
+        return True
+    else:
+        explain(f"The blocks retrieved from the cryptogram ({msg_blocks_number}) do not match "
+                f"the blocks retrieved from the rubric ({signed_msg_blocks})")
+        explain("The signature does not correspond to the cryptogram")
+        return False
+
+
+@explaining_method
 def _transform(msg: str | int,
                key: int,
                n: int,
@@ -311,4 +451,3 @@ def _transform(msg: str | int,
         explain(f'\n{chunk_number} gets converted to {encrypted_numbers[-1]}\n')
 
     return encrypted_numbers
-
