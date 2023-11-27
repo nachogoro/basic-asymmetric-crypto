@@ -93,7 +93,8 @@ def encrypt(msg: str,
     cached_conversions = dict()
     # In order to encrypt a message we just need the public key of the
     # receiver
-    if not receiver.get_public_key(generator, p):
+    receiver_pubkey = receiver.get_public_key(generator, p)
+    if not receiver_pubkey:
         explain('Public key of %s is unknown' % str(receiver.name))
         return None
 
@@ -133,10 +134,10 @@ def encrypt(msg: str,
 
         explain(f'\nEncrypting {chunk} as ('
                 f'{generator}^{v_for_block} mod {p}, '
-                f'{chunk_number}*{receiver.get_public_key(generator, p)}^{v_for_block} mod {p})')
+                f'{chunk_number}*{receiver_pubkey}^{v_for_block} mod {p})')
 
         g_v = modmath.fast_exp(generator, v_for_block, p)
-        g_v_b = modmath.fast_exp(receiver.get_public_key(generator, p),
+        g_v_b = modmath.fast_exp(receiver_pubkey,
                                  v_for_block,
                                  p)
         m_g_v_b = chunk_number * g_v_b % p
